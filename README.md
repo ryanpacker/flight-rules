@@ -1,4 +1,4 @@
-# Personal Development OS
+# Flight Rules
 
 This repo is my personal, opinionated system for running software projects with AI coding agents (Claude Code, Cursor, Windsurf, etc.) and humans.
 
@@ -169,7 +169,7 @@ This is a **personal system**, not a compliance framework.
 Each project tracks which version of this system it uses via a version marker in `AGENTS.md`:
 
 ```
-pdos_version: 0.1
+flight_rules_version: 0.1
 ```
 
 This helps with:
