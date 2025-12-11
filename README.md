@@ -1,6 +1,6 @@
 # Flight Rules
 
-This repo is my personal, opinionated system for running software projects with AI coding agents (Claude Code, Cursor, Windsurf, etc.) and humans.
+An opinionated framework for AI-assisted software development. Provides conventions for docs, implementation specs, and coding session workflows that both humans and agents can navigate.
 
 The goal:  
 Any agent (or person) should be able to open a project that “installs” this system and understand:
