@@ -67,6 +67,14 @@ At minimum, each project should have:
 
 Projects can add more files under `docs/` (architecture diagrams, API docs, etc.), but these are the core ones the system assumes.
 
+Additionally, each project has a `.agents/` directory for agent-specific resources:
+
+- `.agents/commands/`  
+  Command files that define workflows agents can execute (e.g., `start-coding-session.md`, `end-coding-session.md`).
+
+- `.agents/prompts/`  
+  Reusable prompt templates for common tasks. Version and share frequently-used prompts here.
+
 ### 3. Implementation spec model (single source of truth)
 
 Implementation work is organized into a three-level spec system under `docs/implementation/`:
@@ -107,7 +115,7 @@ There are two core flows:
 - `start-coding-session`
 - `end-coding-session`
 
-These are implemented as templates under `docs/sessions/` in this repo and copied into each project.
+These are implemented as templates under `.agents/commands/` in this repo and copied into each project.
 
 Agents **do not** start or end sessions on their own.  
 The user explicitly invokes these flows using commands or prompts defined in the tool-specific configs (for example, Windsurf commands).
@@ -210,11 +218,14 @@ A rough layout of this “OS” repo:
 │     │  ├─ critical-learnings.md
 │     │  ├─ session_plans/
 │     │  │  └─ session_plan.template.md
-│     │  ├─ session_details/
-│     │  │  └─ session_detail.template.md
-│     │  └─ sessions/
-│     │     ├─ start-coding-session.md
-│     │     └─ end-coding-session.md
+│     │  └─ session_details/
+│     │     └─ session_detail.template.md
+│     └─ .agents/
+│        ├─ commands/
+│        │  ├─ start-coding-session.md
+│        │  └─ end-coding-session.md
+│        └─ prompts/
+│           └─ .gitkeep
 └─ tools/
    ├─ claude.template.md
    ├─ cursor.cursorrules.template
