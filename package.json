@@ -1,0 +1,41 @@
+{
+  "name": "flight-rules",
+  "version": "0.1.0",
+  "description": "An opinionated framework for AI-assisted software development",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "flight-rules": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "payload"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ryanpacker/flight-rules.git"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "cli",
+    "ai",
+    "development",
+    "agents",
+    "documentation"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.0"
+  },
+  "dependencies": {
+    "@clack/prompts": "^0.7.0",
+    "picocolors": "^1.0.0"
+  }
+}

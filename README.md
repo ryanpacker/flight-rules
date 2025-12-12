@@ -15,14 +15,70 @@ Any agent (or person) should be able to open a project that uses Flight Rules an
 
 ## How It Works
 
-This repo contains the **source template** that gets installed into your projects.
+This repo is an npm package containing:
 
-| This Repo | Your Project |
-|-----------|--------------|
-| `src/` | `.flight-rules/` |
-| `tools/` | Scripts/prompts that generate coding agent-specific adapters |
+| Path | Purpose |
+|------|---------|
+| `payload/` | The Flight Rules content that gets delivered to your project as `.flight-rules/` |
+| `src/` | CLI source code (TypeScript) |
+| `dist/` | Compiled CLI (generated, gitignored) |
 
-Everything in `src/` gets copied to your project as `.flight-rules/`. The `tools/` directory contains scripts or prompts that can generate coding agent-specific adapter files (like `AGENTS.md` or `.cursor/rules` for Cursor or `CLAUDE.md` or `.claude/rules` for Claude Code) in your project root.
+Use the CLI to install, upgrade, and configure Flight Rules in your projects.
+
+---
+
+## Installation
+
+### Quick Start (Recommended)
+
+Install globally from GitHub:
+
+```bash
+npm install -g github:ryanpacker/flight-rules
+```
+
+Then initialize Flight Rules in any project:
+
+```bash
+cd your-project
+flight-rules init
+```
+
+### Alternative: One-time Use with npx
+
+Run directly without installing:
+
+```bash
+cd your-project
+npx github:ryanpacker/flight-rules init
+```
+
+### What `init` Does
+
+The `init` command will:
+- Create `.flight-rules/` directory with all Flight Rules content
+- Optionally generate agent adapters (AGENTS.md for Cursor, CLAUDE.md for Claude Code, etc.)
+- Help you set up initial project docs
+
+### Manual Installation
+
+If you prefer not to use the CLI:
+
+1. Clone this repo somewhere convenient:
+
+   ```bash
+   git clone https://github.com/ryanpacker/flight-rules.git ~/flight-rules
+   cd ~/flight-rules && npm install && npm run build
+   ```
+
+2. Copy the payload into your project:
+
+   ```bash
+   cd /path/to/your/project
+   cp -R ~/flight-rules/payload .flight-rules
+   ```
+
+3. Initialize your project docs by copying templates from `doc-templates/` to `docs/`.
 
 ---
 
@@ -56,6 +112,16 @@ your-project/
 - **`docs/`** – Your project content. Flight Rules never overwrites this directory.
 
 When you first set up a project, copy templates from `doc-templates/` into `docs/` (or have an agent do it). After that, `docs/` is yours—Flight Rules upgrades won't touch it.
+
+---
+
+## CLI Commands
+
+| Command | Description |
+|---------|-------------|
+| `flight-rules init` | Install Flight Rules into a project (interactive setup wizard) |
+| `flight-rules upgrade` | Upgrade Flight Rules in an existing project (preserves your docs) |
+| `flight-rules adapter` | Generate agent-specific adapters (`--cursor`, `--claude`, `--windsurf`) |
 
 ---
 
@@ -119,96 +185,50 @@ This appears in `.flight-rules/AGENTS.md` and helps coordinate upgrades.
 
 ```text
 .
+├── package.json              # npm package configuration
+├── tsconfig.json             # TypeScript configuration
 ├── README.md                 # This file
-├── src/                      # THE TEMPLATE - everything here ships to projects
-│   ├── AGENTS.md             # Agent guidelines
-│   ├── doc-templates/        # Templates for project docs
-│   │   ├── prd.md
-│   │   ├── progress.md
-│   │   ├── critical-learnings.md
-│   │   ├── session-log.md
-│   │   └── implementation/
-│   │       └── overview.md
-│   ├── docs/                 # Empty structure for user content
-│   │   ├── implementation/
-│   │   └── session_logs/
-│   ├── commands/
-│   │   ├── start-coding-session.md
-│   │   └── end-coding-session.md
-│   └── prompts/
-│       └── prd/
-└── tools/                    # Scripts/prompts to generate coding agent-specific adapters
-    ├── cursor-agents.md      # Generates AGENTS.md for Cursor
-    └── claude-md.md          # Generates CLAUDE.md for Claude Code
+├── src/                      # CLI source code (TypeScript)
+│   ├── index.ts              # CLI entry point
+│   ├── commands/             # Command implementations
+│   │   ├── init.ts
+│   │   ├── upgrade.ts
+│   │   └── adapter.ts
+│   └── utils/
+│       └── files.ts          # File utilities
+├── dist/                     # Compiled CLI (gitignored)
+└── payload/                  # THE PAYLOAD - content delivered to projects as .flight-rules/
+    ├── AGENTS.md             # Agent guidelines
+    ├── doc-templates/        # Templates for project docs
+    │   ├── prd.md
+    │   ├── progress.md
+    │   ├── critical-learnings.md
+    │   ├── session-log.md
+    │   └── implementation/
+    │       └── overview.md
+    ├── docs/                 # Empty structure for user content
+    │   ├── implementation/
+    │   └── session_logs/
+    ├── commands/
+    │   ├── start-coding-session.md
+    │   └── end-coding-session.md
+    └── prompts/
+        └── prd/
 ```
 
 **Key insight:** `doc-templates/` contains framework content that upgrades can replace. `docs/` is an empty structure for user content that upgrades never touch.
 
 ---
 
-## Installing (Manual)
-
-Until there's a dedicated installer CLI:
-
-1. **Clone this repo** somewhere convenient:
-
-   ```bash
-   git clone https://github.com/ryanpacker/flight-rules.git ~/flight-rules
-   ```
-
-2. **Copy the source template** into your project:
-
-   ```bash
-   cd /path/to/your/project
-   cp -R ~/flight-rules/src .flight-rules
-   ```
-
-3. **Generate coding agent specific adapters** (optional, based on what AI tools you use):
-
-   Use the scripts or prompts in `tools/` to generate adapter files for your specific AI coding agents. These adapters create files like `AGENTS.md` (for Cursor), or `CLAUDE.md` (for Claude Code) at your project root that point to `.flight-rules/`.
-
-4. **Initialize your project docs:**
-
-   Copy the templates you need from `doc-templates/` to `docs/`:
-
-   ```bash
-   # Example: set up PRD and implementation overview
-   cp .flight-rules/doc-templates/prd.md .flight-rules/docs/prd.md
-   cp .flight-rules/doc-templates/progress.md .flight-rules/docs/progress.md
-   cp .flight-rules/doc-templates/critical-learnings.md .flight-rules/docs/critical-learnings.md
-   cp .flight-rules/doc-templates/implementation/overview.md .flight-rules/docs/implementation/overview.md
-   ```
-
-   Or ask your AI agent: "Help me set up the Flight Rules docs for this project"
-
-5. **Customize your project:**
-
-   - Edit `.flight-rules/docs/prd.md` – Define your product requirements
-   - Edit `.flight-rules/docs/implementation/overview.md` – Define implementation areas
-
-6. **Start working:**
-
-   - Use normal prompts for small tasks
-   - Say "start coding session" or "end coding session" for structured work
-
----
-
 ## Upgrading
 
-When Flight Rules evolves, upgrade the framework files while preserving your content:
+Use the CLI to upgrade Flight Rules while preserving your content:
 
 ```bash
-cd /path/to/your/project
-
-# Replace framework files (safe - these don't contain your content)
-cp ~/flight-rules/src/AGENTS.md .flight-rules/
-cp -R ~/flight-rules/src/doc-templates .flight-rules/
-cp -R ~/flight-rules/src/commands .flight-rules/
-cp -R ~/flight-rules/src/prompts .flight-rules/
-
-# NEVER run: cp -R ~/flight-rules/src/docs .flight-rules/
-# Your docs/ directory contains your project content!
+flight-rules upgrade
 ```
+
+This replaces framework files while preserving your `docs/` directory.
 
 **Safe to replace on upgrade:**
 - `AGENTS.md` – Agent guidelines
@@ -216,7 +236,7 @@ cp -R ~/flight-rules/src/prompts .flight-rules/
 - `commands/` – Workflow command definitions
 - `prompts/` – Prompt templates
 
-**Never replace:**
+**Never replaced:**
 - `docs/` – This is YOUR project content (PRD, specs, progress, session logs)
 
 After upgrading, check `doc-templates/` for any new templates or updated guidance you might want to incorporate into your existing docs.
@@ -246,9 +266,6 @@ After upgrading, check `doc-templates/` for any new templates or updated guidanc
 
 ## Future Directions
 
-Not yet defined:
-
-- **Installer CLI** – Script to install/upgrade Flight Rules
 - **Skills/MCP integration** – Conventions for documenting tools and workflows
 - **Hosted planning systems** – Potential integration with Linear, etc.
 
@@ -256,4 +273,4 @@ For now, the focus is:
 
 - A solid, Markdown-based structure
 - Clear expectations for agents
-- A path to automation later
+- CLI tooling for easy installation and upgrades
