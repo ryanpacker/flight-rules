@@ -34,7 +34,7 @@ Use the CLI to install, upgrade, and configure Flight Rules in your projects.
 Install globally from GitHub:
 
 ```bash
-npm install -g github:ryanpacker/flight-rules
+npm install -g https://github.com/ryanpacker/flight-rules/tarball/main
 ```
 
 Then initialize Flight Rules in any project:
@@ -50,7 +50,7 @@ Run directly without installing:
 
 ```bash
 cd your-project
-npx github:ryanpacker/flight-rules init
+npx https://github.com/ryanpacker/flight-rules/tarball/main init
 ```
 
 ### What `init` Does
