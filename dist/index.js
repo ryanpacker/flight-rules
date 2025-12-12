@@ -46,7 +46,6 @@ ${pc.bold('Commands:')}
 ${pc.bold('Adapter Options:')}
   --cursor    Generate AGENTS.md for Cursor
   --claude    Generate CLAUDE.md for Claude Code
-  --windsurf  Generate .windsurfrules for Windsurf
   --all       Generate all adapters
 
 ${pc.bold('Examples:')}

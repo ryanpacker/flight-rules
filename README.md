@@ -121,7 +121,7 @@ When you first set up a project, copy templates from `doc-templates/` into `docs
 |---------|-------------|
 | `flight-rules init` | Install Flight Rules into a project (interactive setup wizard) |
 | `flight-rules upgrade` | Upgrade Flight Rules in an existing project (preserves your docs) |
-| `flight-rules adapter` | Generate agent-specific adapters (`--cursor`, `--claude`, `--windsurf`) |
+| `flight-rules adapter` | Generate agent-specific adapters (`--cursor`, `--claude`) |
 
 ---
 

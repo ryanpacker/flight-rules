@@ -23,12 +23,6 @@ const ADAPTERS: Record<string, AdapterConfig> = {
     title: 'Flight Rules – Claude Code Adapter',
     description: 'This file is placed at the project root as `CLAUDE.md` for Claude Code compatibility.',
   },
-  windsurf: {
-    name: 'Windsurf',
-    filename: '.windsurfrules',
-    title: 'Flight Rules – Windsurf Adapter',
-    description: 'This file is placed at the project root as `.windsurfrules` for Windsurf compatibility.',
-  },
 };
 
 function generateAdapterContent(config: AdapterConfig): string {

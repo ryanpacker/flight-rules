@@ -73,7 +73,6 @@ export async function init() {
             options: [
                 { value: 'cursor', label: 'Cursor (AGENTS.md)', hint: 'recommended' },
                 { value: 'claude', label: 'Claude Code (CLAUDE.md)' },
-                { value: 'windsurf', label: 'Windsurf (.windsurfrules)' },
             ],
             initialValues: ['cursor'],
         });
