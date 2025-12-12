@@ -39,10 +39,9 @@ your-project/
     │   ├── prd.md            # Product requirements (you fill this in)
     │   ├── implementation/   # Implementation specs
     │   │   └── overview.md
-    │   ├── progress.md       # Session log
+    │   ├── progress.md       # High-level progress log
     │   ├── critical-learnings.md
-    │   ├── session_plans/    # Plans created by start-coding-session
-    │   └── session_details/  # Logs created by end-coding-session
+    │   └── session_logs/     # Session documentation
     ├── commands/
     │   ├── start-coding-session.md
     │   └── end-coding-session.md
@@ -92,7 +91,7 @@ Two core flows:
 - **`start-coding-session`** – Review context, set goals, create a plan
 - **`end-coding-session`** – Summarize work, update progress, capture learnings
 
-Agents don't start these on their own; you explicitly invoke them.
+Session documentation goes in `.flight-rules/docs/session_logs/`. Agents don't start these flows on their own; you explicitly invoke them.
 
 ### 4. Versioning
 
@@ -119,10 +118,7 @@ This appears in `.flight-rules/AGENTS.md` and helps coordinate upgrades.
 │   │   │   └── overview.md
 │   │   ├── progress.md
 │   │   ├── critical-learnings.md
-│   │   ├── session_plans/
-│   │   │   └── session_plan.template.md
-│   │   └── session_details/
-│   │       └── session_detail.template.md
+│   │   └── session_logs/     # Session documentation
 │   ├── commands/
 │   │   ├── start-coding-session.md
 │   │   └── end-coding-session.md
