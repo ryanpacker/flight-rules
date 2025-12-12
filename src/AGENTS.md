@@ -36,27 +36,46 @@ Agents should prefer working *with* this system rather than inventing their own 
 
 This project contains a `.flight-rules/` directory with the following structure:
 
+### doc-templates/
+
+Templates for project documentation. These are Flight Rules framework files that can be replaced on upgrade.
+
+- `.flight-rules/doc-templates/prd.md` – Template for product requirements
+- `.flight-rules/doc-templates/progress.md` – Template for progress log
+- `.flight-rules/doc-templates/critical-learnings.md` – Template for learnings
+- `.flight-rules/doc-templates/session-log.md` – Template for session logs
+- `.flight-rules/doc-templates/implementation/overview.md` – Template for implementation overview
+
+When helping users set up a new project, copy these templates to `docs/`.
+
 ### docs/
+
+**This directory contains user-owned project content. Flight Rules upgrades never touch this directory.**
 
 - `.flight-rules/docs/prd.md`  
   - Product requirements and high-level goals.
   - Agents should read this when clarifying "what are we building and why?"
+  - Created by copying from `doc-templates/prd.md`
 
 - `.flight-rules/docs/implementation/`  
   - Home of the implementation spec hierarchy (see next section).
   - The **spec is the single source of truth** for what should exist in the codebase and why.
+  - Start by copying `doc-templates/implementation/overview.md` here.
 
 - `.flight-rules/docs/progress.md`  
   - A running high-level log of sessions and milestones.
   - Each session gets a short entry + link to its detailed log file.
+  - Created by copying from `doc-templates/progress.md`
 
 - `.flight-rules/docs/critical-learnings.md`  
   - A curated list of reusable insights, patterns, and "never again" notes.
   - Agents should propose additions when a session reveals something important or reusable.
+  - Created by copying from `doc-templates/critical-learnings.md`
 
 - `.flight-rules/docs/session_logs/`  
   - Session documentation created during coding sessions.
   - Contains plans, summaries, and learnings from each session.
+  - Use `doc-templates/session-log.md` as a template for new logs.
 
 ### commands/
 
@@ -161,7 +180,7 @@ When the user triggers a start session command, follow the process defined in `.
      - Potential challenges and mitigations
 
 4. **Document the session plan**
-   - Create a session log in `.flight-rules/docs/session_logs/`.
+   - Create a session log in `.flight-rules/docs/session_logs/` using the template at `.flight-rules/doc-templates/session-log.md`.
    - Reference relevant Task Group and Task IDs.
 
 5. **Confirm before coding**

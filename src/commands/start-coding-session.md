@@ -8,7 +8,7 @@ Read and understand:
 - `.flight-rules/docs/prd.md` – What is this project?
 - `.flight-rules/docs/implementation/overview.md` – What are the implementation areas?
 - `.flight-rules/docs/progress.md` – What was done recently?
-- The most recent `.flight-rules/docs/session_details/*_session_details.md` – What happened last session?
+- The most recent `.flight-rules/docs/session_logs/*_session.md` – What happened last session?
 
 Scan relevant code as needed to understand current state.
 
@@ -33,9 +33,9 @@ Collaborate with the user on:
 
 ## 4. Document the Session Plan
 
-Create a new file: `.flight-rules/docs/session_plans/YYYYMMDD_HHMM_session_plan.md`
+Create a new file: `.flight-rules/docs/session_logs/YYYYMMDD_HHMM_session.md`
 
-Use the template at `session_plan.template.md` as a guide.
+Use the template at `.flight-rules/doc-templates/session-log.md` as a guide.
 
 Include:
 - Session goals
@@ -47,7 +47,7 @@ Include:
 
 Present the plan to the user and ask:
 
-> "The session plan has been documented in `.flight-rules/docs/session_plans/YYYYMMDD_HHMM_session_plan.md`. Are you ready for me to begin implementing this plan?"
+> "The session plan has been documented in `.flight-rules/docs/session_logs/YYYYMMDD_HHMM_session.md`. Are you ready for me to begin implementing this plan?"
 
 **Do not begin implementation until the user confirms.**
 

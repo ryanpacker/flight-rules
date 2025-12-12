@@ -46,3 +46,4 @@ Consider: timeline, budget, technology, dependencies, team capacity.
 How will you know this project succeeded?
 Define observable, measurable outcomes.
 -->
+
