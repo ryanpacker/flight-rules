@@ -65,17 +65,17 @@ Inside `.flight-rules/`:
 
 ### 2. Implementation Specs (Single Source of Truth)
 
-Implementation work is organized into a three-level spec system under `.flight-rules/docs/implementation/`:
+Implementation specs are organized into a three-level hierarchy under `.flight-rules/docs/implementation/`:
 
-1. **Level 1: Overview**
-   - `overview.md` lists all major implementation areas
+| Level | Name | Example | Description |
+|-------|------|---------|-------------|
+| 1 | **Area** | `1-foundation-shell/` | A major implementation area |
+| 2 | **Task Group** | `1.4-application-shell.md` | A file containing related tasks |
+| 3 | **Task** | `1.4.1. Routing Structure` | A specific unit of work with status |
 
-2. **Level 2: Per-area directories**
-   - `{N}-{kebab-topic}/` for each area
-   - Contains `index.md` and detailed spec files
-
-3. **Level 3: Detailed specs**
-   - `{N}.{M}-topic.md` files with scope, decisions, tasks, and status
+- `overview.md` lists all Areas
+- Each Area directory contains Task Group files (`{N}.{M}-topic.md`)
+- Each Task Group file contains individual Tasks with their own status
 
 **Key principle:** The spec is the single source of truth. If code diverges from spec, update the spec.
 
@@ -198,8 +198,8 @@ This works because:
 
 ### When making changes
 
-- Identify relevant implementation specs
-- Update specs when reality diverges from plan
+- Identify relevant Area, Task Group, and Task
+- Update Tasks when reality diverges from plan
 - Keep `Status:` fields current
 
 ---
