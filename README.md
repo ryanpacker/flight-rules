@@ -124,7 +124,7 @@ This appears in `.flight-rules/AGENTS.md` and helps coordinate upgrades.
 │   │   └── end-coding-session.md
 │   └── prompts/
 │       └── .gitkeep
-└── tools/                    # Scripts/prompts to generate tool-specific adapters
+└── tools/                    # Scripts/prompts to generate coding agent-specific adapters
     ├── cursor-agents.md      # Generates AGENTS.md for Cursor
     └── claude-md.md          # Generates CLAUDE.md for Claude Code
 ```
@@ -150,9 +150,9 @@ Until there's a dedicated installer CLI:
    cp -R ~/flight-rules/src .flight-rules
    ```
 
-3. **Generate tool adapters** (optional, based on what AI tools you use):
+3. **Generate coding agent specific adapters** (optional, based on what AI tools you use):
 
-   Use the scripts or prompts in `tools/` to generate adapter files for your specific AI tools. These adapters create files like `AGENTS.md` (for Cursor), or `CLAUDE.md` (for Claude Code) at your project root that point to `.flight-rules/`.
+   Use the scripts or prompts in `tools/` to generate adapter files for your specific AI coding agents. These adapters create files like `AGENTS.md` (for Cursor), or `CLAUDE.md` (for Claude Code) at your project root that point to `.flight-rules/`.
 
 4. **Customize your project:**
 

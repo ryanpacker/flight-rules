@@ -218,7 +218,7 @@ When the user triggers an end session command, follow the process in `.flight-ru
   - If an instruction is ambiguous, ask for clarification rather than guessing.
 
 - **Defer to project-specific overrides**  
-  - If the project has its own `AGENTS.local.md` or tool-specific config that extends these rules, follow those where they differ.
+  - If the project has its own `AGENTS.local.md` or agent-specific config that extends these rules, follow those where they differ.
 
 ---
 
