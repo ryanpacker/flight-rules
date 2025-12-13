@@ -13,25 +13,9 @@ Any agent (or person) should be able to open a project that uses Flight Rules an
 
 ---
 
-## How It Works
+## Quick Start
 
-This repo is an npm package containing:
-
-| Path | Purpose |
-|------|---------|
-| `payload/` | The Flight Rules content that gets delivered to your project as `.flight-rules/` |
-| `src/` | CLI source code (TypeScript) |
-| `dist/` | Compiled CLI (generated, committed for GitHub installs) |
-
-Use the CLI to install, upgrade, and configure Flight Rules in your projects.
-
----
-
-## Installation
-
-### Quick Start (Recommended)
-
-Install globally from GitHub:
+Install the CLI globally:
 
 ```bash
 npm install -g https://github.com/ryanpacker/flight-rules/tarball/main
@@ -44,54 +28,85 @@ cd your-project
 flight-rules init
 ```
 
-### Alternative: One-time Use with npx
-
-Run directly without installing:
+Or run directly without installing:
 
 ```bash
-cd your-project
 npx https://github.com/ryanpacker/flight-rules/tarball/main init
 ```
 
-### What `init` Does
-
 The `init` command will:
-- Create `.flight-rules/` directory with all Flight Rules content
+- Create a `.flight-rules/` directory with all Flight Rules content
 - Optionally generate agent adapters (AGENTS.md for Cursor, CLAUDE.md for Claude Code, etc.)
 - Help you set up initial project docs
 
-### Manual Installation
+---
 
-If you prefer not to use the CLI:
+## How It Works
 
-1. Clone this repo somewhere convenient:
+Flight Rules gives your project a structured documentation system that AI agents (and humans) can navigate consistently.
 
-   ```bash
-   git clone https://github.com/ryanpacker/flight-rules.git ~/flight-rules
-   cd ~/flight-rules && npm install && npm run build
-   ```
+### The `.flight-rules/` Directory
 
-2. Copy the payload into your project:
+All Flight Rules content lives in a single hidden directory at your project root:
 
-   ```bash
-   cd /path/to/your/project
-   cp -R ~/flight-rules/payload .flight-rules
-   ```
+| Directory | Purpose |
+|-----------|---------|
+| `AGENTS.md` | Guidelines for AI agents working on your project |
+| `doc-templates/` | Templates for project docs (PRD, progress, specs) — replaced on upgrade |
+| `docs/` | Your project documentation — never touched by upgrades |
+| `commands/` | Workflow commands (start/end coding session) |
+| `prompts/` | Reusable prompt templates |
 
-3. Initialize your project docs by copying templates from `doc-templates/` to `docs/`.
+**Key distinction:** `doc-templates/` contains Flight Rules framework files that get replaced on upgrade. `docs/` is your content—Flight Rules never overwrites it.
+
+### Implementation Specs (Single Source of Truth)
+
+Implementation specs live in `.flight-rules/docs/implementation/` and follow a three-level hierarchy:
+
+| Level | Name | Example | Description |
+|-------|------|---------|-------------|
+| 1 | **Area** | `1-foundation-shell/` | A major implementation area |
+| 2 | **Task Group** | `1.4-application-shell.md` | A file containing related tasks |
+| 3 | **Task** | `1.4.1. Routing Structure` | A specific unit of work with status |
+
+**Key principle:** The spec is the single source of truth. If code diverges from spec, update the spec.
+
+### Coding Sessions
+
+Flight Rules distinguishes between:
+
+- **Ad-hoc requests** — "Change function X in file Y"
+- **Structured sessions** — Follow a start/end ritual with documentation
+
+Two core flows:
+
+- **`start-coding-session`** — Review context, set goals, create a plan
+- **`end-coding-session`** — Summarize work, update progress, capture learnings
+
+Agents don't start these flows on their own; you explicitly invoke them.
+
+### Versioning
+
+Each project tracks which Flight Rules version it uses:
+
+```
+flight_rules_version: 0.1.2
+```
+
+This appears in `.flight-rules/AGENTS.md` and helps coordinate upgrades.
 
 ---
 
 ## What Gets Installed
 
-When you install Flight Rules into a project, you get:
+When you run `flight-rules init`, you get:
 
 ```text
 your-project/
 ├── AGENTS.md                 # (Optional) Adapter for Cursor - points to .flight-rules/
 └── .flight-rules/
     ├── AGENTS.md             # Agent guidelines (the real content)
-    ├── doc-templates/        # Templates (safe to upgrade)
+    ├── doc-templates/        # Templates (replaced on upgrade)
     │   ├── prd.md
     │   ├── progress.md
     │   ├── critical-learnings.md
@@ -107,139 +122,7 @@ your-project/
     └── prompts/              # Reusable prompt templates
 ```
 
-**Key distinction:**
-- **`doc-templates/`** – Flight Rules framework files. These get replaced on upgrade.
-- **`docs/`** – Your project content. Flight Rules never overwrites this directory.
-
-When you first set up a project, copy templates from `doc-templates/` into `docs/` (or have an agent do it). After that, `docs/` is yours—Flight Rules upgrades won't touch it.
-
----
-
-## CLI Commands
-
-| Command | Description |
-|---------|-------------|
-| `flight-rules init` | Install Flight Rules into a project (interactive setup wizard) |
-| `flight-rules upgrade` | Upgrade Flight Rules in an existing project (preserves your docs) |
-| `flight-rules adapter` | Generate agent-specific adapters (`--cursor`, `--claude`) |
-
----
-
-## Core Concepts
-
-### 1. The `.flight-rules/` Directory
-
-All Flight Rules content lives in a single hidden directory at your project root. This keeps things organized and clearly separates "Flight Rules stuff" from your actual code.
-
-Inside `.flight-rules/`:
-
-- **`AGENTS.md`** – The main agent guidelines
-- **`doc-templates/`** – Templates for project docs (PRD, progress, specs, etc.)
-- **`docs/`** – Your project documentation (copied from templates, then customized)
-- **`commands/`** – Workflow commands (start/end coding session)
-- **`prompts/`** – Reusable prompt templates
-
-### 2. Implementation Specs (Single Source of Truth)
-
-Implementation specs are organized into a three-level hierarchy under `.flight-rules/docs/implementation/`:
-
-| Level | Name | Example | Description |
-|-------|------|---------|-------------|
-| 1 | **Area** | `1-foundation-shell/` | A major implementation area |
-| 2 | **Task Group** | `1.4-application-shell.md` | A file containing related tasks |
-| 3 | **Task** | `1.4.1. Routing Structure` | A specific unit of work with status |
-
-- `overview.md` lists all Areas (copy from `doc-templates/implementation/overview.md` first)
-- Each Area directory contains Task Group files (`{N}.{M}-topic.md`)
-- Each Task Group file contains individual Tasks with their own status
-
-**Key principle:** The spec is the single source of truth. If code diverges from spec, update the spec.
-
-### 3. Coding Sessions
-
-Flight Rules distinguishes between:
-
-- **Ad-hoc requests** – "Change function X in file Y"
-- **Structured sessions** – Follow a start/end ritual with documentation
-
-Two core flows:
-
-- **`start-coding-session`** – Review context, set goals, create a plan
-- **`end-coding-session`** – Summarize work, update progress, capture learnings
-
-Session documentation goes in `.flight-rules/docs/session_logs/`. Agents don't start these flows on their own; you explicitly invoke them.
-
-### 4. Versioning
-
-Each project tracks which Flight Rules version it uses:
-
-```
-flight_rules_version: 0.1
-```
-
-This appears in `.flight-rules/AGENTS.md` and helps coordinate upgrades.
-
----
-
-## This Repo's Structure
-
-```text
-.
-├── package.json              # npm package configuration
-├── tsconfig.json             # TypeScript configuration
-├── README.md                 # This file
-├── src/                      # CLI source code (TypeScript)
-│   ├── index.ts              # CLI entry point
-│   ├── commands/             # Command implementations
-│   │   ├── init.ts
-│   │   ├── upgrade.ts
-│   │   └── adapter.ts
-│   └── utils/
-│       └── files.ts          # File utilities
-├── dist/                     # Compiled CLI (gitignored)
-└── payload/                  # THE PAYLOAD - content delivered to projects as .flight-rules/
-    ├── AGENTS.md             # Agent guidelines
-    ├── doc-templates/        # Templates for project docs
-    │   ├── prd.md
-    │   ├── progress.md
-    │   ├── critical-learnings.md
-    │   ├── session-log.md
-    │   └── implementation/
-    │       └── overview.md
-    ├── docs/                 # Empty structure for user content
-    │   ├── implementation/
-    │   └── session_logs/
-    ├── commands/
-    │   ├── start-coding-session.md
-    │   └── end-coding-session.md
-    └── prompts/
-        └── prd/
-```
-
-**Key insight:** `doc-templates/` contains framework content that upgrades can replace. `docs/` is an empty structure for user content that upgrades never touch.
-
----
-
-## Upgrading
-
-Use the CLI to upgrade Flight Rules while preserving your content:
-
-```bash
-flight-rules upgrade
-```
-
-This replaces framework files while preserving your `docs/` directory.
-
-**Safe to replace on upgrade:**
-- `AGENTS.md` – Agent guidelines
-- `doc-templates/` – Templates (your content is in `docs/`, not here)
-- `commands/` – Workflow command definitions
-- `prompts/` – Prompt templates
-
-**Never replaced:**
-- `docs/` – This is YOUR project content (PRD, specs, progress, session logs)
-
-After upgrading, check `doc-templates/` for any new templates or updated guidance you might want to incorporate into your existing docs.
+When you first set up a project, copy templates from `doc-templates/` into `docs/` (or have an agent do it). After that, `docs/` is yours.
 
 ---
 
@@ -253,8 +136,8 @@ After upgrading, check `doc-templates/` for any new templates or updated guidanc
 
 ### For structured work
 
-- **"start coding session"** – Sets goals, creates a plan
-- **"end coding session"** – Summarizes work, updates docs
+- **"start coding session"** — Sets goals, creates a plan
+- **"end coding session"** — Summarizes work, updates docs
 
 ### When making changes
 
@@ -264,13 +147,96 @@ After upgrading, check `doc-templates/` for any new templates or updated guidanc
 
 ---
 
+## CLI Commands
+
+| Command | Description |
+|---------|-------------|
+| `flight-rules init` | Install Flight Rules into a project (interactive setup wizard) |
+| `flight-rules upgrade` | Upgrade Flight Rules in an existing project (preserves your docs) |
+| `flight-rules adapter` | Generate agent-specific adapters (`--cursor`, `--claude`) |
+
+---
+
+## Upgrading
+
+Upgrade Flight Rules while preserving your content:
+
+```bash
+flight-rules upgrade
+```
+
+**Replaced on upgrade:**
+- `AGENTS.md` — Agent guidelines
+- `doc-templates/` — Templates (your content is in `docs/`, not here)
+- `commands/` — Workflow command definitions
+- `prompts/` — Prompt templates
+
+**Never replaced:**
+- `docs/` — Your project content (PRD, specs, progress, session logs)
+
+After upgrading, check `doc-templates/` for new templates or updated guidance you might want to incorporate.
+
+---
+
+## Manual Installation
+
+If you prefer not to use the CLI:
+
+1. Clone this repo:
+
+   ```bash
+   git clone https://github.com/ryanpacker/flight-rules.git ~/flight-rules
+   ```
+
+2. Copy the payload into your project:
+
+   ```bash
+   cp -R ~/flight-rules/payload /path/to/your/project/.flight-rules
+   ```
+
+3. Copy templates from `doc-templates/` to `docs/` and customize them.
+
+---
+
 ## Future Directions
 
-- **Skills/MCP integration** – Conventions for documenting tools and workflows
-- **Hosted planning systems** – Potential integration with Linear, etc.
+- **Skills/MCP integration** — Conventions for documenting tools and workflows
+- **Hosted planning systems** — Potential integration with Linear, etc.
+- **npm registry publishing** — Simpler installation (targeting v0.2)
 
 For now, the focus is:
 
 - A solid, Markdown-based structure
 - Clear expectations for agents
 - CLI tooling for easy installation and upgrades
+
+---
+
+## Contributing
+
+This repo is an npm package with the following structure:
+
+| Path | Purpose |
+|------|---------|
+| `src/` | CLI source code (TypeScript) |
+| `dist/` | Compiled CLI (committed for GitHub installs) |
+| `payload/` | The content delivered to projects as `.flight-rules/` |
+| `scripts/` | Build and release utilities |
+
+### Development
+
+```bash
+git clone https://github.com/ryanpacker/flight-rules.git
+cd flight-rules
+npm install
+npm run build
+```
+
+### Releasing
+
+```bash
+npm version patch   # or minor/major
+git push && git push --tags
+```
+
+This automatically builds, syncs the version to `payload/AGENTS.md`, and creates a tagged commit.
