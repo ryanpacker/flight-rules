@@ -21,7 +21,7 @@ This repo is an npm package containing:
 |------|---------|
 | `payload/` | The Flight Rules content that gets delivered to your project as `.flight-rules/` |
 | `src/` | CLI source code (TypeScript) |
-| `dist/` | Compiled CLI (generated, gitignored) |
+| `dist/` | Compiled CLI (generated, committed for GitHub installs) |
 
 Use the CLI to install, upgrade, and configure Flight Rules in your projects.
 
