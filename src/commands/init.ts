@@ -2,7 +2,8 @@ import * as p from '@clack/prompts';
 import pc from 'picocolors';
 import { 
   isFlightRulesInstalled, 
-  copyPayload, 
+  fetchPayloadFromGitHub,
+  copyPayloadFrom,
   getFlightRulesDir,
   ensureDir 
 } from '../utils/files.js';
@@ -28,15 +29,34 @@ export async function init() {
   
   const spinner = p.spinner();
   
+  // Fetch from GitHub
+  spinner.start('Fetching latest Flight Rules from GitHub...');
+  
+  let fetched;
+  try {
+    fetched = await fetchPayloadFromGitHub();
+    spinner.stop(`Found Flight Rules version ${pc.cyan(fetched.version)}`);
+  } catch (error) {
+    spinner.stop('Failed to fetch from GitHub');
+    if (error instanceof Error) {
+      p.log.error(error.message);
+    }
+    p.outro('Check your network connection and try again.');
+    return;
+  }
+  
   // Copy payload
   spinner.start('Installing Flight Rules...');
   try {
-    copyPayload(cwd);
+    copyPayloadFrom(fetched.payloadPath, cwd);
     spinner.stop('Flight Rules installed!');
   } catch (error) {
     spinner.stop('Failed to install Flight Rules');
+    fetched.cleanup();
     throw error;
   }
+  
+  fetched.cleanup();
   
   // Ask about initializing docs
   const initDocs = await p.confirm({
@@ -108,4 +128,3 @@ export async function init() {
   
   p.outro(pc.green('Flight Rules is ready! Start with: "start coding session"'));
 }
-

@@ -2,13 +2,11 @@ import * as p from '@clack/prompts';
 import pc from 'picocolors';
 import { 
   isFlightRulesInstalled, 
-  copyFrameworkFiles,
-  getPayloadPath
+  fetchPayloadFromGitHub,
+  copyFrameworkFilesFrom
 } from '../utils/files.js';
-import { readFileSync } from 'fs';
-import { join } from 'path';
 
-export async function upgrade() {
+export async function upgrade(version?: string) {
   const cwd = process.cwd();
   
   // Check if Flight Rules is installed
@@ -29,41 +27,48 @@ export async function upgrade() {
   p.log.message('  • docs/ (your project content)');
   console.log();
   
-  // Get version info if available
+  const spinner = p.spinner();
+  
+  // Fetch from GitHub
+  spinner.start(version ? `Fetching Flight Rules ${version} from GitHub...` : 'Fetching latest Flight Rules from GitHub...');
+  
+  let fetched;
   try {
-    const payloadPath = getPayloadPath();
-    const agentsMd = readFileSync(join(payloadPath, 'AGENTS.md'), 'utf-8');
-    const versionMatch = agentsMd.match(/flight_rules_version:\s*([\d.]+)/);
-    if (versionMatch) {
-      p.log.info(`Upgrading to Flight Rules version ${pc.cyan(versionMatch[1])}`);
+    fetched = await fetchPayloadFromGitHub(version);
+    spinner.stop(`Found Flight Rules version ${pc.cyan(fetched.version)}`);
+  } catch (error) {
+    spinner.stop('Failed to fetch from GitHub');
+    if (error instanceof Error) {
+      p.log.error(error.message);
     }
-  } catch {
-    // Ignore version detection errors
+    p.outro('Check your network connection and try again.');
+    return;
   }
   
   const shouldContinue = await p.confirm({
-    message: 'Proceed with upgrade?',
+    message: `Upgrade to version ${fetched.version}?`,
     initialValue: true,
   });
   
   if (p.isCancel(shouldContinue) || !shouldContinue) {
+    fetched.cleanup();
     p.log.info('Upgrade cancelled.');
     return;
   }
   
-  const spinner = p.spinner();
-  
   spinner.start('Upgrading Flight Rules...');
   try {
-    copyFrameworkFiles(cwd);
+    copyFrameworkFilesFrom(fetched.payloadPath, cwd);
     spinner.stop('Flight Rules upgraded!');
   } catch (error) {
     spinner.stop('Failed to upgrade Flight Rules');
+    fetched.cleanup();
     throw error;
   }
+  
+  fetched.cleanup();
   
   p.log.success('Framework files have been updated.');
   p.log.info('Check doc-templates/ for any new templates you might want to use.');
   p.outro(pc.green('Upgrade complete!'));
 }
-

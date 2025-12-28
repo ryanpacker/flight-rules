@@ -6,6 +6,21 @@ import { upgrade } from './commands/upgrade.js';
 import { adapter } from './commands/adapter.js';
 const command = process.argv[2];
 const args = process.argv.slice(3);
+/**
+ * Parse --version flag from args, returning the version value if present
+ */
+function parseVersionArg(args) {
+    const versionIndex = args.findIndex(arg => arg === '--version' || arg === '-V');
+    if (versionIndex !== -1 && args[versionIndex + 1]) {
+        return args[versionIndex + 1];
+    }
+    // Also support --version=0.1.4 format
+    const versionArg = args.find(arg => arg.startsWith('--version='));
+    if (versionArg) {
+        return versionArg.split('=')[1];
+    }
+    return undefined;
+}
 async function main() {
     console.log();
     p.intro(pc.bgCyan(pc.black(' flight-rules ')));
@@ -14,7 +29,8 @@ async function main() {
             await init();
             break;
         case 'upgrade':
-            await upgrade();
+            const version = parseVersionArg(args);
+            await upgrade(version);
             break;
         case 'adapter':
             await adapter(args);
@@ -26,7 +42,7 @@ async function main() {
             break;
         case '--version':
         case '-v':
-            console.log('flight-rules v0.1.0');
+            console.log('flight-rules CLI');
             break;
         default:
             p.log.error(`Unknown command: ${command}`);
@@ -43,6 +59,10 @@ ${pc.bold('Commands:')}
   upgrade     Upgrade Flight Rules (preserves your docs)
   adapter     Generate agent-specific adapter files
 
+${pc.bold('Upgrade Options:')}
+  --version <version>   Upgrade to a specific version (e.g., 0.1.4)
+                        Defaults to latest from main branch
+
 ${pc.bold('Adapter Options:')}
   --cursor    Generate AGENTS.md for Cursor
   --claude    Generate CLAUDE.md for Claude Code
@@ -51,6 +71,7 @@ ${pc.bold('Adapter Options:')}
 ${pc.bold('Examples:')}
   flight-rules init
   flight-rules upgrade
+  flight-rules upgrade --version 0.1.4
   flight-rules adapter --cursor --claude
 `);
 }

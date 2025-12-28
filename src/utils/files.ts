@@ -1,9 +1,14 @@
-import { existsSync, mkdirSync, cpSync } from 'fs';
+import { existsSync, mkdirSync, cpSync, createWriteStream, rmSync, readdirSync, readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { tmpdir } from 'os';
+import { pipeline } from 'stream/promises';
+import * as tar from 'tar';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+const GITHUB_REPO = 'ryanpacker/flight-rules';
 
 /**
  * Get the path to the payload directory (the Flight Rules content to install)
@@ -75,5 +80,142 @@ export function ensureDir(dir: string): void {
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true });
   }
+}
+
+/**
+ * Result of fetching payload from GitHub
+ */
+export interface FetchedPayload {
+  payloadPath: string;
+  version: string;
+  cleanup: () => void;
+}
+
+/**
+ * Fetch the Flight Rules payload from GitHub
+ * @param version - Git ref to fetch (tag like 'v0.1.4', branch like 'main', or 'latest' for main)
+ * @returns Object with payloadPath, version string, and cleanup function
+ */
+export async function fetchPayloadFromGitHub(version?: string): Promise<FetchedPayload> {
+  const ref = (!version || version === 'latest') ? 'main' : version.startsWith('v') ? version : `v${version}`;
+  const tarballUrl = `https://github.com/${GITHUB_REPO}/tarball/${ref}`;
+  
+  // Create temp directory
+  const tempDir = join(tmpdir(), `flight-rules-${Date.now()}`);
+  mkdirSync(tempDir, { recursive: true });
+  
+  const tarballPath = join(tempDir, 'payload.tar.gz');
+  const extractDir = join(tempDir, 'extracted');
+  mkdirSync(extractDir, { recursive: true });
+  
+  const cleanup = () => {
+    try {
+      rmSync(tempDir, { recursive: true, force: true });
+    } catch {
+      // Ignore cleanup errors
+    }
+  };
+  
+  try {
+    // Download tarball
+    const response = await fetch(tarballUrl, {
+      headers: { 'Accept': 'application/vnd.github+json' },
+      redirect: 'follow',
+    });
+    
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error(`Version '${ref}' not found. Check available versions at https://github.com/${GITHUB_REPO}/tags`);
+      }
+      throw new Error(`Failed to download from GitHub: ${response.status} ${response.statusText}`);
+    }
+    
+    if (!response.body) {
+      throw new Error('No response body received from GitHub');
+    }
+    
+    // Write tarball to disk using Readable.fromWeb for proper stream compatibility
+    const { Readable } = await import('stream');
+    const fileStream = createWriteStream(tarballPath);
+    const nodeStream = Readable.fromWeb(response.body as import('stream/web').ReadableStream);
+    await pipeline(nodeStream, fileStream);
+    
+    // Extract tarball
+    await tar.extract({
+      file: tarballPath,
+      cwd: extractDir,
+    });
+    
+    // Find the extracted directory (GitHub creates a directory like 'user-repo-hash')
+    const extractedDirs = readdirSync(extractDir);
+    if (extractedDirs.length === 0) {
+      throw new Error('No files extracted from tarball');
+    }
+    
+    const repoDir = join(extractDir, extractedDirs[0]);
+    const payloadPath = join(repoDir, 'payload');
+    
+    if (!existsSync(payloadPath)) {
+      throw new Error('Payload directory not found in downloaded content');
+    }
+    
+    // Read version from AGENTS.md
+    let detectedVersion = ref;
+    try {
+      const agentsMd = readFileSync(join(payloadPath, 'AGENTS.md'), 'utf-8');
+      const versionMatch = agentsMd.match(/flight_rules_version:\s*([\d.]+)/);
+      if (versionMatch) {
+        detectedVersion = versionMatch[1];
+      }
+    } catch {
+      // Ignore version detection errors
+    }
+    
+    return {
+      payloadPath,
+      version: detectedVersion,
+      cleanup,
+    };
+  } catch (error) {
+    cleanup();
+    throw error;
+  }
+}
+
+/**
+ * Copy framework files from a source payload directory (used by both local and remote)
+ */
+export function copyFrameworkFilesFrom(sourcePayloadPath: string, targetDir: string): void {
+  const destPath = getFlightRulesDir(targetDir);
+  
+  // Files/directories that are safe to replace on upgrade
+  const frameworkItems = [
+    'AGENTS.md',
+    'doc-templates',
+    'commands',
+    'prompts'
+  ];
+  
+  for (const item of frameworkItems) {
+    const srcItem = join(sourcePayloadPath, item);
+    const destItem = join(destPath, item);
+    
+    if (existsSync(srcItem)) {
+      cpSync(srcItem, destItem, { recursive: true });
+    }
+  }
+}
+
+/**
+ * Copy entire payload from a source directory (used by both local and remote)
+ */
+export function copyPayloadFrom(sourcePayloadPath: string, targetDir: string): void {
+  const destPath = getFlightRulesDir(targetDir);
+  
+  if (!existsSync(sourcePayloadPath)) {
+    throw new Error(`Payload not found at ${sourcePayloadPath}`);
+  }
+  
+  cpSync(sourcePayloadPath, destPath, { recursive: true });
 }
 

@@ -1,1 +1,1 @@
-export declare function upgrade(): Promise<void>;
+export declare function upgrade(version?: string): Promise<void>;

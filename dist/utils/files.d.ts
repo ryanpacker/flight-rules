@@ -22,3 +22,25 @@ export declare function copyFrameworkFiles(targetDir: string): void;
  * Ensure a directory exists
  */
 export declare function ensureDir(dir: string): void;
+/**
+ * Result of fetching payload from GitHub
+ */
+export interface FetchedPayload {
+    payloadPath: string;
+    version: string;
+    cleanup: () => void;
+}
+/**
+ * Fetch the Flight Rules payload from GitHub
+ * @param version - Git ref to fetch (tag like 'v0.1.4', branch like 'main', or 'latest' for main)
+ * @returns Object with payloadPath, version string, and cleanup function
+ */
+export declare function fetchPayloadFromGitHub(version?: string): Promise<FetchedPayload>;
+/**
+ * Copy framework files from a source payload directory (used by both local and remote)
+ */
+export declare function copyFrameworkFilesFrom(sourcePayloadPath: string, targetDir: string): void;
+/**
+ * Copy entire payload from a source directory (used by both local and remote)
+ */
+export declare function copyPayloadFrom(sourcePayloadPath: string, targetDir: string): void;
