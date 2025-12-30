@@ -4,18 +4,14 @@ A curated list of important insights, patterns, and decisions that should inform
 
 ---
 
-<!-- 
-Add learnings as they emerge from sessions:
+## Architecture
 
-## Category Name
+### Keep upgrade boundaries at the top level
 
-### Learning Title
+**Context:** When deciding whether `docs/` should live inside `.flight-rules/` or at the project root.
 
-**Context:** When/where this came up
+**Insight:** Distinguishing "replaceable on upgrade" vs "user-owned" content is cleaner when the boundary is at the directory level rather than between subdirectories. Having both `doc-templates/` (replaceable) and `docs/` (user-owned) inside the same parent directory was confusing.
 
-**Insight:** What we learned
-
-**Implication:** How this should affect future decisions
--->
+**Implication:** When designing directory structures with mixed ownership, prefer separating concerns at the highest practical level. Users should be able to think "this whole directory is mine" or "this whole directory is framework."
 
 

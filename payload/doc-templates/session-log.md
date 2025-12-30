@@ -2,7 +2,7 @@
 
 <!-- 
 Use this template for documenting coding sessions.
-Copy to docs/session_logs/YYYYMMDD_HHMM_session.md
+Copy to docs/session_logs/YYYYMMDD_HHMM_session.md (at project root)
 -->
 
 ## Session Goals

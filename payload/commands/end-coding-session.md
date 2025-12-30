@@ -24,7 +24,7 @@ Present the summary to the user for review and approval.
 
 ## 3. Update the Session Log
 
-Update the session log file in `.flight-rules/docs/session_logs/YYYYMMDD_HHMM_session.md`
+Update the session log file in `docs/session_logs/YYYYMMDD_HHMM_session.md`
 
 Use the template at `.flight-rules/doc-templates/session-log.md` as a guide if creating a new log.
 
@@ -40,7 +40,7 @@ Include:
 
 ## 4. Update Progress
 
-Append a short entry to `.flight-rules/docs/progress.md`:
+Append a short entry to `docs/progress.md`:
 
 ```markdown
 ### YYYY-MM-DD HH:MM
@@ -64,7 +64,7 @@ Scan the session for reusable insights:
 - Mistakes to avoid
 - Important decisions that should inform future work
 
-Propose additions to `.flight-rules/docs/critical-learnings.md` and update when approved.
+Propose additions to `docs/critical-learnings.md` and update when approved.
 
 ## 7. Offer to Commit
 
@@ -75,4 +75,3 @@ If yes, help prepare a commit message that:
 - Summarizes what was accomplished
 - References the session log file
 - Is concise but meaningful
-

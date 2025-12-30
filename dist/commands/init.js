@@ -3,6 +3,27 @@ import pc from 'picocolors';
 import { isFlightRulesInstalled, fetchPayloadFromGitHub, copyPayloadFrom, getFlightRulesDir, ensureDir } from '../utils/files.js';
 import { cpSync, existsSync } from 'fs';
 import { join } from 'path';
+const DOC_FILES = [
+    { src: 'prd.md', dest: 'prd.md' },
+    { src: 'progress.md', dest: 'progress.md' },
+    { src: 'critical-learnings.md', dest: 'critical-learnings.md' },
+    { src: 'implementation/overview.md', dest: 'implementation/overview.md' },
+];
+async function copyDocsFromTemplates(templatesDir, docsDir, skipExisting) {
+    ensureDir(docsDir);
+    ensureDir(join(docsDir, 'implementation'));
+    ensureDir(join(docsDir, 'session_logs'));
+    for (const file of DOC_FILES) {
+        const srcPath = join(templatesDir, file.src);
+        const destPath = join(docsDir, file.dest);
+        if (!existsSync(srcPath))
+            continue;
+        if (skipExisting && existsSync(destPath)) {
+            continue;
+        }
+        cpSync(srcPath, destPath);
+    }
+}
 export async function init() {
     const cwd = process.cwd();
     // Check if already installed
@@ -57,23 +78,32 @@ export async function init() {
     if (initDocs) {
         const flightRulesDir = getFlightRulesDir(cwd);
         const templatesDir = join(flightRulesDir, 'doc-templates');
-        const docsDir = join(flightRulesDir, 'docs');
-        // Copy templates to docs
-        const filesToCopy = [
-            { src: 'prd.md', dest: 'prd.md' },
-            { src: 'progress.md', dest: 'progress.md' },
-            { src: 'critical-learnings.md', dest: 'critical-learnings.md' },
-            { src: 'implementation/overview.md', dest: 'implementation/overview.md' },
-        ];
-        for (const file of filesToCopy) {
-            const srcPath = join(templatesDir, file.src);
-            const destPath = join(docsDir, file.dest);
-            if (existsSync(srcPath)) {
-                ensureDir(join(docsDir, 'implementation'));
-                cpSync(srcPath, destPath);
+        const docsDir = join(cwd, 'docs');
+        // Check if docs directory already exists with content
+        const docsExist = existsSync(docsDir);
+        let skipExisting = false;
+        if (docsExist) {
+            const handleExisting = await p.select({
+                message: 'A docs/ directory already exists. How would you like to proceed?',
+                options: [
+                    { value: 'skip', label: 'Skip existing files', hint: 'only create missing files' },
+                    { value: 'overwrite', label: 'Overwrite existing files' },
+                    { value: 'cancel', label: 'Cancel docs initialization' },
+                ],
+            });
+            if (p.isCancel(handleExisting) || handleExisting === 'cancel') {
+                p.log.info('Skipped docs initialization.');
+            }
+            else {
+                skipExisting = handleExisting === 'skip';
+                await copyDocsFromTemplates(templatesDir, docsDir, skipExisting);
+                p.log.success('Project docs initialized from templates.');
             }
         }
-        p.log.success('Project docs initialized from templates.');
+        else {
+            await copyDocsFromTemplates(templatesDir, docsDir, false);
+            p.log.success('Project docs initialized from templates.');
+        }
     }
     // Ask about generating adapters
     const generateAdapters = await p.confirm({

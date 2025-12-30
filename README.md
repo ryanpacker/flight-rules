@@ -35,9 +35,9 @@ npx https://github.com/ryanpacker/flight-rules/tarball/main init
 ```
 
 The `init` command will:
-- Create a `.flight-rules/` directory with all Flight Rules content
+- Create a `.flight-rules/` directory with framework files
+- Optionally create a `docs/` directory with project documentation from templates
 - Optionally generate agent adapters (AGENTS.md for Cursor, CLAUDE.md for Claude Code, etc.)
-- Help you set up initial project docs
 
 ---
 
@@ -45,23 +45,25 @@ The `init` command will:
 
 Flight Rules gives your project a structured documentation system that AI agents (and humans) can navigate consistently.
 
-### The `.flight-rules/` Directory
+### Project Structure
 
-All Flight Rules content lives in a single hidden directory at your project root:
+| Location | Purpose |
+|----------|---------|
+| `.flight-rules/` | Framework files (can be replaced on upgrade) |
+| `docs/` | Your project documentation (never touched by upgrades) |
+
+**Inside `.flight-rules/`:**
 
 | Directory | Purpose |
 |-----------|---------|
 | `AGENTS.md` | Guidelines for AI agents working on your project |
-| `doc-templates/` | Templates for project docs (PRD, progress, specs) — replaced on upgrade |
-| `docs/` | Your project documentation — never touched by upgrades |
+| `doc-templates/` | Templates for creating project docs |
 | `commands/` | Workflow commands (start/end coding session) |
 | `prompts/` | Reusable prompt templates |
 
-**Key distinction:** `doc-templates/` contains Flight Rules framework files that get replaced on upgrade. `docs/` is your content—Flight Rules never overwrites it.
-
 ### Implementation Specs (Single Source of Truth)
 
-Implementation specs live in `.flight-rules/docs/implementation/` and follow a three-level hierarchy:
+Implementation specs live in `docs/implementation/` and follow a three-level hierarchy:
 
 | Level | Name | Example | Description |
 |-------|------|---------|-------------|
@@ -104,25 +106,27 @@ When you run `flight-rules init`, you get:
 ```text
 your-project/
 ├── AGENTS.md                 # (Optional) Adapter for Cursor - points to .flight-rules/
-└── .flight-rules/
-    ├── AGENTS.md             # Agent guidelines (the real content)
-    ├── doc-templates/        # Templates (replaced on upgrade)
+├── docs/                     # YOUR content (never touched by upgrades)
+│   ├── prd.md
+│   ├── progress.md
+│   ├── critical-learnings.md
+│   ├── implementation/
+│   │   └── overview.md
+│   └── session_logs/
+└── .flight-rules/            # Framework files (can be replaced on upgrade)
+    ├── AGENTS.md             # Agent guidelines
+    ├── doc-templates/        # Templates for creating your docs
     │   ├── prd.md
     │   ├── progress.md
     │   ├── critical-learnings.md
     │   ├── session-log.md
     │   └── implementation/
     │       └── overview.md
-    ├── docs/                 # YOUR content (never touched by upgrades)
-    │   ├── implementation/   # Your specs go here
-    │   └── session_logs/     # Session logs accumulate here
     ├── commands/
     │   ├── start-coding-session.md
     │   └── end-coding-session.md
     └── prompts/              # Reusable prompt templates
 ```
-
-When you first set up a project, copy templates from `doc-templates/` into `docs/` (or have an agent do it). After that, `docs/` is yours.
 
 ---
 
@@ -131,8 +135,8 @@ When you first set up a project, copy templates from `doc-templates/` into `docs
 ### When you open a project
 
 1. Agents should read `.flight-rules/AGENTS.md`
-2. Skim `.flight-rules/docs/prd.md` and `implementation/overview.md`
-3. Check `.flight-rules/docs/progress.md` for recent work
+2. Skim `docs/prd.md` and `docs/implementation/overview.md`
+3. Check `docs/progress.md` for recent work
 
 ### For structured work
 
@@ -165,16 +169,13 @@ Upgrade Flight Rules while preserving your content:
 flight-rules upgrade
 ```
 
-**Replaced on upgrade:**
-- `AGENTS.md` — Agent guidelines
-- `doc-templates/` — Templates (your content is in `docs/`, not here)
-- `commands/` — Workflow command definitions
-- `prompts/` — Prompt templates
+**What gets replaced:**
+- The `.flight-rules/` directory (framework files)
 
-**Never replaced:**
-- `docs/` — Your project content (PRD, specs, progress, session logs)
+**What is never touched:**
+- `docs/` at your project root (your content)
 
-After upgrading, check `doc-templates/` for new templates or updated guidance you might want to incorporate.
+After upgrading, check `.flight-rules/doc-templates/` for new templates or updated guidance you might want to incorporate.
 
 ---
 
@@ -194,7 +195,7 @@ If you prefer not to use the CLI:
    cp -R ~/flight-rules/payload /path/to/your/project/.flight-rules
    ```
 
-3. Copy templates from `doc-templates/` to `docs/` and customize them.
+3. Create a `docs/` directory and copy templates from `.flight-rules/doc-templates/` to customize them.
 
 ---
 

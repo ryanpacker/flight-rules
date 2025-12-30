@@ -10,14 +10,11 @@ export async function upgrade(version) {
         return;
     }
     // Show what will be upgraded
-    p.log.info(`${pc.bold('The following will be replaced:')}`);
-    p.log.message('  • AGENTS.md');
-    p.log.message('  • doc-templates/');
-    p.log.message('  • commands/');
-    p.log.message('  • prompts/');
+    p.log.info(`${pc.bold('The .flight-rules/ directory will be upgraded.')}`);
+    p.log.message('  Framework files (AGENTS.md, doc-templates/, commands/, prompts/) will be replaced.');
     console.log();
-    p.log.info(`${pc.bold('The following will be preserved:')}`);
-    p.log.message('  • docs/ (your project content)');
+    p.log.info(`${pc.bold('Your project content will be preserved.')}`);
+    p.log.message('  docs/ at project root is never touched by Flight Rules.');
     console.log();
     const spinner = p.spinner();
     // Fetch from GitHub
