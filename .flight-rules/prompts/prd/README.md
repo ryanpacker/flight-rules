@@ -12,7 +12,7 @@ Prompts to help create Product Requirements Documents.
 
 Copy the prompt into your AI assistant and follow the conversation. The AI will guide you through each section of the PRD.
 
-The template for the PRD is at `.flight-rules/doc-templates/prd.md`. After completing the conversation, save the output to `.flight-rules/docs/prd.md`.
+The template for the PRD is at `.flight-rules/doc-templates/prd.md`. After completing the conversation, save the output to `docs/prd.md`.
 
 ## Output
 
