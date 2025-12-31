@@ -226,6 +226,27 @@ describe('init.ts', () => {
       expect(ensureDir).toHaveBeenCalledWith(join(mockCwd, 'docs/session_logs'));
     });
 
+    it('should copy all doc template files including tech-stack.md', async () => {
+      // Template files exist in payload
+      vi.mocked(existsSync).mockImplementation((path) => {
+        const pathStr = String(path);
+        if (pathStr.includes('doc-templates')) return true;
+        return false;
+      });
+      
+      vi.mocked(p.confirm)
+        .mockResolvedValueOnce(true)  // init docs
+        .mockResolvedValueOnce(false); // generate adapters
+      
+      await init();
+      
+      // Verify tech-stack.md is among the files copied
+      expect(cpSync).toHaveBeenCalledWith(
+        join(mockCwd, '.flight-rules/doc-templates/tech-stack.md'),
+        join(mockCwd, 'docs/tech-stack.md')
+      );
+    });
+
     it('should skip docs initialization if user declines', async () => {
       vi.mocked(p.confirm)
         .mockResolvedValueOnce(false) // init docs

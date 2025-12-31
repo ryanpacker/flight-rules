@@ -8,6 +8,7 @@ const DOC_FILES = [
     { src: 'progress.md', dest: 'progress.md' },
     { src: 'critical-learnings.md', dest: 'critical-learnings.md' },
     { src: 'implementation/overview.md', dest: 'implementation/overview.md' },
+    { src: 'tech-stack.md', dest: 'tech-stack.md' },
 ];
 async function copyDocsFromTemplates(templatesDir, docsDir, skipExisting) {
     ensureDir(docsDir);

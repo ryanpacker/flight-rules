@@ -110,6 +110,7 @@ your-project/
 │   ├── prd.md
 │   ├── progress.md
 │   ├── critical-learnings.md
+│   ├── tech-stack.md
 │   ├── implementation/
 │   │   └── overview.md
 │   └── session_logs/
@@ -119,12 +120,15 @@ your-project/
     │   ├── prd.md
     │   ├── progress.md
     │   ├── critical-learnings.md
+    │   ├── tech-stack.md
     │   ├── session-log.md
     │   └── implementation/
     │       └── overview.md
     ├── commands/
     │   ├── start-coding-session.md
-    │   └── end-coding-session.md
+    │   ├── end-coding-session.md
+    │   ├── test.add.md
+    │   └── test.assess-current.md
     └── prompts/              # Reusable prompt templates
 ```
 

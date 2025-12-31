@@ -69,6 +69,12 @@ The `docs/` directory at the project root contains your project content. **Fligh
   - Agents should propose additions when a session reveals something important or reusable.
   - Created by copying from `.flight-rules/doc-templates/critical-learnings.md`
 
+- `docs/tech-stack.md`  
+  - Documents the project's technical environment (testing framework, runtime, key dependencies).
+  - Agents should read this when performing tech-dependent tasks like creating tests.
+  - Use `/test.assess-current` to auto-populate this file based on the project's setup.
+  - Created by copying from `.flight-rules/doc-templates/tech-stack.md`
+
 - `docs/session_logs/`  
   - Session documentation created during coding sessions.
   - Contains plans, summaries, and learnings from each session.
