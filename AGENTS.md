@@ -16,7 +16,7 @@ Agent guidelines and workflows live in `.flight-rules/`. Project documentation l
 | PRD | `docs/prd.md` |
 | Implementation Specs | `docs/implementation/` |
 | Progress Log | `docs/progress.md` |
-| Session Commands | `.flight-rules/commands/` |
+| Session Commands | `.cursor/commands/` (as slash commands) |
 
 ## For Agents
 
@@ -26,7 +26,7 @@ Please read `.flight-rules/AGENTS.md` for complete guidelines on:
 - Coding sessions
 - How to work with this system
 
-When the user says "start coding session" or "end coding session", follow the instructions in `.flight-rules/commands/`.
+Use the `/start-coding-session` and `/end-coding-session` slash commands.
 
 ---
 

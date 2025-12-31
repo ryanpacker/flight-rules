@@ -118,7 +118,7 @@ export async function init() {
         const adapters = await p.multiselect({
             message: 'Which adapters would you like to generate?',
             options: [
-                { value: 'cursor', label: 'Cursor (AGENTS.md)', hint: 'recommended' },
+                { value: 'cursor', label: 'Cursor (AGENTS.md + .cursor/commands/)', hint: 'recommended' },
                 { value: 'claude', label: 'Claude Code (CLAUDE.md)' },
             ],
             initialValues: ['cursor'],
