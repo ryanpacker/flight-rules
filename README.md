@@ -233,6 +233,25 @@ npm install
 npm run build
 ```
 
+### Testing
+
+The project uses [Vitest](https://vitest.dev/) for testing with ~93% code coverage.
+
+```bash
+npm test              # Run tests once
+npm run test:watch    # Watch mode for development
+npm run test:coverage # Generate coverage report
+```
+
+Tests are located in `tests/` and mirror the `src/` structure:
+
+| Test File | Coverage |
+|-----------|----------|
+| `tests/utils/files.test.ts` | 100% |
+| `tests/commands/init.test.ts` | 98.5% |
+| `tests/commands/upgrade.test.ts` | 100% |
+| `tests/commands/adapter.test.ts` | 79% |
+
 ### Releasing
 
 ```bash

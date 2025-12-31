@@ -6,6 +6,15 @@ A running log of sessions and milestones.
 
 ## Session Logs
 
+### 2024-12-31
+
+- Implemented comprehensive testing strategy with Vitest
+- Added 89 unit tests achieving 93% overall code coverage
+- Full coverage: `files.ts` (100%), `init.ts` (98.5%), `upgrade.ts` (100% lines)
+- Established mocking patterns for fs, network (fetch), and @clack/prompts
+- Added npm scripts: `test`, `test:watch`, `test:coverage`
+- See: [session_logs/20251231_1200_session.md](session_logs/20251231_1200_session.md)
+
 ### 2024-12-29
 
 - Moved `docs/` from inside `.flight-rules/` to project root in destination projects
