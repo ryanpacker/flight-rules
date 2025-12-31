@@ -1,49 +1,71 @@
 # Product Requirements Document
 
-<!-- 
-This template defines what you're building and why.
-Fill in each section; delete comments when done.
--->
-
 ## Overview
 
-<!-- 
-What is this project? Why does it exist?
-Describe the product/feature in 2-3 sentences.
--->
+Flight Rules is an opinionated framework for AI-assisted software development. It provides a standardized structure for documentation, implementation specs, and coding session workflows that both humans and AI agents can navigate consistently.
+
+The core problem: when an AI agent opens a project, it lacks context about what the project is, what's been done, and what comes next. Flight Rules creates a predictable structure so any agent (or human) can get oriented quickly.
 
 ## Goals
 
-<!-- 
-What are the high-level goals this project aims to achieve?
-List 3-5 specific, measurable outcomes.
--->
+1. **Consistent workflow across projects** — Install Flight Rules in any project and immediately have a standard way of working. No recreating process from scratch each time.
+   - *Measured by:* Setup takes seconds (one CLI command), not minutes
+
+2. **Agent/tool portability** — Work seamlessly across Cursor, Claude Code, and future AI coding tools. Define your workflow once, use it everywhere.
+   - *Measured by:* Switching tools requires zero additional configuration
+
+3. **Structured path from requirements to implementation** — A standard flow: capture requirements (PRD) → create implementation specs → break down into trackable tasks.
+   - *Measured by:* Every project has a clear PRD → implementation spec → task hierarchy
+
+4. **Preserve context across time and agents** — Session logs, progress tracking, and learnings persist so that any agent, person, or future-you can pick up where things left off.
+   - *Measured by:* An agent can resume work after a gap without the user re-explaining context
 
 ## Non-Goals
 
-<!-- 
-What is explicitly out of scope?
-Listing non-goals prevents scope creep and clarifies focus.
--->
+1. **Not a project management tool** — Flight Rules doesn't replace Linear, Jira, or GitHub Issues. It's documentation conventions, not a hosted system.
+
+2. **Not prescriptive about tech stack** — Flight Rules doesn't care if you're building in Python, TypeScript, or Rust. It's language/framework agnostic.
+
+3. **Not an AI agent itself** — Flight Rules provides structure *for* agents, but it doesn't execute code or make decisions. The agent does the work; Flight Rules tells it where to look.
+
+4. **Not a CI/CD or automation system** — No automated triggers, webhooks, or pipelines. It's static Markdown files that agents read.
 
 ## User Stories
 
-<!-- 
-Who benefits from this, and how?
-Format: "As a [type of user], I want [goal] so that [benefit]."
--->
+1. **As a developer using AI coding tools**, I want a consistent project structure so that I don't have to re-explain my workflow every time I start a new project or switch tools.
+
+2. **As an AI agent**, I want clear documentation conventions so that I can quickly understand a project's purpose, current state, and what to work on next.
+
+3. **As a developer returning to a project after time away**, I want session logs and progress tracking so that I can pick up where I left off without losing context.
+
+4. **As a team member joining a project**, I want standardized documentation so that I can onboard quickly without someone walking me through everything.
+
+5. **As a developer switching between Cursor and Claude Code**, I want agent-specific adapters so that each tool knows how to find and use the Flight Rules structure.
 
 ## Constraints
 
-<!-- 
-What limitations affect this project?
-Consider: timeline, budget, technology, dependencies, team capacity.
--->
+1. **Careful handling of user-owned directories** — Flight Rules operates in directories the user also owns (`docs/`, `.cursor/commands/`). The rules:
+   - **Adding new files:** Common and expected (e.g., `prd.create` writes `docs/prd.md`, upgrades add new templates)
+   - **Updating existing files:** Rare and requires care. Ideally, detect whether a file has been user-modified vs. left as a template. If unmodified, safe to update; if modified, notify rather than overwrite.
+   - **Over-communicate:** Any changes to user-owned directories should be explicit and transparent
+
+2. **CLI distribution via GitHub (for now)** — Until npm registry publishing (v0.2), installation happens via GitHub tarball. This affects how users install and upgrade.
 
 ## Success Criteria
 
-<!-- 
-How will you know this project succeeded?
-Define observable, measurable outcomes.
--->
+### Primary Measure
 
+**DRY for development workflows** — If Flight Rules is working, the user rarely repeats themselves. Context, workflow instructions, and project knowledge are captured once and reused by any agent, tool, or future session.
+
+### Ultimate Outcome
+
+**Dramatically increased productivity** — Using AI agents to produce high-quality software becomes significantly easier, faster, and more efficient.
+
+### Supporting Indicators
+
+| Goal | Observable Evidence |
+|------|---------------------|
+| Consistent workflow | `flight-rules init` creates a functional project structure in seconds |
+| Agent portability | Adapters exist for multiple tools; switching requires no additional configuration |
+| Requirements → Tasks | Projects have a clear path from PRD → implementation specs → tracked tasks |
+| Preserve context | Agents can resume work after gaps without user re-explanation |
