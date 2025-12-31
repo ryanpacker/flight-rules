@@ -6,6 +6,14 @@ A running log of sessions and milestones.
 
 ## Session Logs
 
+### 2024-12-31 (evening)
+
+- Created `prd.create` command with dual-mode support (conversational + one-shot)
+- Created `prd.clarify` command for refining specific PRD sections
+- Updated prompts README to reference new commands
+- Inspired by Spec Kit and ChatPRD patterns
+- See: [session_logs/20251231_2140_session.md](session_logs/20251231_2140_session.md)
+
 ### 2024-12-31
 
 - Implemented comprehensive testing strategy with Vitest

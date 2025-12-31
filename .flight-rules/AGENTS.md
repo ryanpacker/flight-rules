@@ -1,6 +1,6 @@
 # Flight Rules – Agent Guidelines
 
-flight_rules_version: 0.4.1
+flight_rules_version: 0.4.2
 
 This file defines how agents (Claude Code, Cursor, etc.) should work on software projects using the Flight Rules system.
 
@@ -47,38 +47,33 @@ The `.flight-rules/` directory contains Flight Rules framework files. These can 
 
 ### `docs/` – Your project documentation
 
-The `docs/` directory at the project root contains your project content. **Flight Rules never touches this directory.**
+The `docs/` directory at the project root contains your project content. These files are created by `flight-rules init` and new templates are added during `flight-rules upgrade`.
 
 - `docs/prd.md`  
   - Product requirements and high-level goals.
   - Agents should read this when clarifying "what are we building and why?"
-  - Created by copying from `.flight-rules/doc-templates/prd.md`
 
 - `docs/implementation/`  
   - Home of the implementation spec hierarchy (see next section).
   - The **spec is the single source of truth** for what should exist in the codebase and why.
-  - Start by copying `.flight-rules/doc-templates/implementation/overview.md` here.
 
 - `docs/progress.md`  
   - A running high-level log of sessions and milestones.
   - Each session gets a short entry + link to its detailed log file.
-  - Created by copying from `.flight-rules/doc-templates/progress.md`
 
 - `docs/critical-learnings.md`  
   - A curated list of reusable insights, patterns, and "never again" notes.
   - Agents should propose additions when a session reveals something important or reusable.
-  - Created by copying from `.flight-rules/doc-templates/critical-learnings.md`
 
 - `docs/tech-stack.md`  
   - Documents the project's technical environment (testing framework, runtime, key dependencies).
   - Agents should read this when performing tech-dependent tasks like creating tests.
   - Use `/test.assess-current` to auto-populate this file based on the project's setup.
-  - Created by copying from `.flight-rules/doc-templates/tech-stack.md`
 
 - `docs/session_logs/`  
   - Session documentation created during coding sessions.
   - Contains plans, summaries, and learnings from each session.
-  - Use `.flight-rules/doc-templates/session-log.md` as a template for new logs.
+  - Agents create new session logs following the structure in `.flight-rules/doc-templates/session-log.md`.
 
 ---
 
