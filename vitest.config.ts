@@ -8,6 +8,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],
+      reportsDirectory: './tests/coverage',
       include: ['src/**/*.ts'],
       exclude: ['src/index.ts'], // CLI entry point tested separately
     },
