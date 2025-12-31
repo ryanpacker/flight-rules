@@ -49,8 +49,8 @@ Flight Rules gives your project a structured documentation system that AI agents
 
 | Location | Purpose |
 |----------|---------|
-| `.flight-rules/` | Framework files (can be replaced on upgrade) |
-| `docs/` | Your project documentation (never touched by upgrades) |
+| `.flight-rules/` | Framework files (replaced on upgrade) |
+| `docs/` | Your project documentation (new templates added on upgrade, existing files preserved) |
 
 **Inside `.flight-rules/`:**
 
@@ -106,7 +106,7 @@ When you run `flight-rules init`, you get:
 ```text
 your-project/
 ├── AGENTS.md                 # (Optional) Adapter for Cursor - points to .flight-rules/
-├── docs/                     # YOUR content (never touched by upgrades)
+├── docs/                     # YOUR content (new templates added on upgrade)
 │   ├── prd.md
 │   ├── progress.md
 │   ├── critical-learnings.md
@@ -176,10 +176,9 @@ flight-rules upgrade
 **What gets replaced:**
 - The `.flight-rules/` directory (framework files)
 
-**What is never touched:**
-- `docs/` at your project root (your content)
-
-After upgrading, check `.flight-rules/doc-templates/` for new templates or updated guidance you might want to incorporate.
+**What gets added (without overwriting):**
+- New templates are added to `docs/` if they don't already exist
+- Your existing doc files are never modified
 
 ---
 

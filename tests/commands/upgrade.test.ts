@@ -38,6 +38,7 @@ vi.mock('fs', async () => {
     ...actual,
     existsSync: vi.fn(),
     writeFileSync: vi.fn(),
+    cpSync: vi.fn(),
   };
 });
 
@@ -46,6 +47,7 @@ vi.mock('../../src/utils/files.js', () => ({
   isFlightRulesInstalled: vi.fn(),
   fetchPayloadFromGitHub: vi.fn(),
   copyFrameworkFilesFrom: vi.fn(),
+  ensureDir: vi.fn(),
 }));
 
 // Mock adapter.js
@@ -55,11 +57,12 @@ vi.mock('../../src/commands/adapter.js', () => ({
 }));
 
 import * as p from '@clack/prompts';
-import { existsSync, writeFileSync } from 'fs';
+import { existsSync, writeFileSync, cpSync } from 'fs';
 import { 
   isFlightRulesInstalled, 
   fetchPayloadFromGitHub, 
   copyFrameworkFilesFrom,
+  ensureDir,
 } from '../../src/utils/files.js';
 import { isCursorAdapterInstalled, setupCursorCommands } from '../../src/commands/adapter.js';
 import { upgrade } from '../../src/commands/upgrade.js';
@@ -302,11 +305,71 @@ describe('upgrade.ts', () => {
       
       expect(p.outro).toHaveBeenCalledWith(expect.stringContaining('Upgrade complete'));
     });
+  });
 
-    it('should suggest checking doc-templates', async () => {
+  describe('new doc templates', () => {
+    it('should create docs directories', async () => {
       await upgrade();
       
-      expect(p.log.info).toHaveBeenCalledWith(expect.stringContaining('doc-templates'));
+      expect(ensureDir).toHaveBeenCalledWith(join(mockCwd, 'docs'));
+      expect(ensureDir).toHaveBeenCalledWith(join(mockCwd, 'docs', 'implementation'));
+      expect(ensureDir).toHaveBeenCalledWith(join(mockCwd, 'docs', 'session_logs'));
+    });
+
+    it('should copy new templates when they do not exist in docs/', async () => {
+      // Template exists in payload, but not in docs/
+      vi.mocked(existsSync).mockImplementation((path) => {
+        const pathStr = String(path);
+        // Templates exist
+        if (pathStr.includes('/doc-templates/')) return true;
+        // Target docs do not exist
+        if (pathStr.includes('/docs/')) return false;
+        return false;
+      });
+      
+      await upgrade();
+      
+      // Should copy templates
+      expect(cpSync).toHaveBeenCalled();
+      expect(p.log.success).toHaveBeenCalledWith(expect.stringContaining('new template'));
+    });
+
+    it('should NOT overwrite existing doc files', async () => {
+      // Both template and docs exist
+      vi.mocked(existsSync).mockImplementation((path) => {
+        const pathStr = String(path);
+        if (pathStr.includes('/doc-templates/prd.md')) return true;
+        if (pathStr.includes('/docs/prd.md')) return true;
+        return false;
+      });
+      
+      await upgrade();
+      
+      // cpSync should NOT be called for prd.md since it already exists
+      const cpSyncCalls = vi.mocked(cpSync).mock.calls;
+      const prdCopied = cpSyncCalls.some(call => 
+        String(call[1]).includes('prd.md')
+      );
+      expect(prdCopied).toBe(false);
+    });
+
+    it('should only log when new templates were actually added', async () => {
+      // All docs already exist - no new templates added
+      vi.mocked(existsSync).mockImplementation((path) => {
+        const pathStr = String(path);
+        if (pathStr.includes('/doc-templates/')) return true;
+        if (pathStr.includes('/docs/')) return true;
+        return false;
+      });
+      
+      await upgrade();
+      
+      // Should NOT show "Added X new template(s)" message
+      const successCalls = vi.mocked(p.log.success).mock.calls;
+      const newTemplateMessage = successCalls.some(call => 
+        String(call[0]).includes('new template')
+      );
+      expect(newTemplateMessage).toBe(false);
     });
   });
 });

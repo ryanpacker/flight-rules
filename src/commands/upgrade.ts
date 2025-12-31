@@ -1,16 +1,52 @@
 import * as p from '@clack/prompts';
 import pc from 'picocolors';
-import { existsSync } from 'fs';
+import { existsSync, cpSync } from 'fs';
 import { join } from 'path';
 import { 
   isFlightRulesInstalled, 
   fetchPayloadFromGitHub,
-  copyFrameworkFilesFrom
+  copyFrameworkFilesFrom,
+  ensureDir
 } from '../utils/files.js';
 import { 
   isCursorAdapterInstalled, 
   setupCursorCommands
 } from './adapter.js';
+
+const DOC_FILES = [
+  { src: 'prd.md', dest: 'prd.md' },
+  { src: 'progress.md', dest: 'progress.md' },
+  { src: 'critical-learnings.md', dest: 'critical-learnings.md' },
+  { src: 'implementation/overview.md', dest: 'implementation/overview.md' },
+  { src: 'tech-stack.md', dest: 'tech-stack.md' },
+];
+
+/**
+ * Copy new doc templates to docs/ without overwriting existing files.
+ * Returns the list of files that were copied.
+ */
+function copyNewDocsFromTemplates(templatesDir: string, docsDir: string): string[] {
+  ensureDir(docsDir);
+  ensureDir(join(docsDir, 'implementation'));
+  ensureDir(join(docsDir, 'session_logs'));
+  
+  const copied: string[] = [];
+  
+  for (const file of DOC_FILES) {
+    const srcPath = join(templatesDir, file.src);
+    const destPath = join(docsDir, file.dest);
+    
+    if (!existsSync(srcPath)) continue;
+    
+    // Only copy if destination doesn't exist
+    if (!existsSync(destPath)) {
+      cpSync(srcPath, destPath);
+      copied.push(file.dest);
+    }
+  }
+  
+  return copied;
+}
 
 export async function upgrade(version?: string) {
   const cwd = process.cwd();
@@ -51,7 +87,7 @@ export async function upgrade(version?: string) {
   }
   
   p.log.info(`${pc.bold('Your project content will be preserved.')}`);
-  p.log.message('  docs/ at project root is never touched by Flight Rules.');
+  p.log.message('  New templates may be added to docs/, but existing files are never modified.');
   console.log();
   
   const spinner = p.spinner();
@@ -96,6 +132,15 @@ export async function upgrade(version?: string) {
   
   p.log.success('Framework files have been updated.');
   
+  // Add new doc templates to docs/ (without overwriting existing files)
+  const templatesDir = join(fetched.payloadPath, 'doc-templates');
+  const docsDir = join(cwd, 'docs');
+  const newDocs = copyNewDocsFromTemplates(templatesDir, docsDir);
+  
+  if (newDocs.length > 0) {
+    p.log.success(`Added ${newDocs.length} new template(s) to docs/: ${newDocs.join(', ')}`);
+  }
+  
   // Upgrade installed adapters
   if (adaptersToUpgrade.length > 0) {
     spinner.start('Upgrading adapters...');
@@ -137,7 +182,6 @@ export async function upgrade(version?: string) {
   
   fetched.cleanup();
   
-  p.log.info('Check doc-templates/ for any new templates you might want to use.');
   p.outro(pc.green('Upgrade complete!'));
 }
 
