@@ -1,6 +1,6 @@
 import * as p from '@clack/prompts';
 import pc from 'picocolors';
-import { isFlightRulesInstalled, fetchPayloadFromGitHub, copyPayloadFrom, getFlightRulesDir, ensureDir } from '../utils/files.js';
+import { isFlightRulesInstalled, fetchPayloadFromGitHub, copyPayloadFrom, getFlightRulesDir, ensureDir, writeManifest, getCliVersion } from '../utils/files.js';
 import { isInteractive } from '../utils/interactive.js';
 import { cpSync, existsSync } from 'fs';
 import { join } from 'path';
@@ -69,6 +69,15 @@ export async function init() {
     spinner.start('Installing Flight Rules...');
     try {
         copyPayloadFrom(fetched.payloadPath, cwd);
+        // Write manifest to track deployed version
+        writeManifest(cwd, {
+            version: fetched.version,
+            deployedAt: new Date().toISOString(),
+            deployedBy: {
+                cli: getCliVersion(),
+                command: 'init',
+            },
+        });
         spinner.stop('Flight Rules installed!');
     }
     catch (error) {

@@ -2,7 +2,7 @@ import * as p from '@clack/prompts';
 import pc from 'picocolors';
 import { existsSync, cpSync } from 'fs';
 import { join } from 'path';
-import { isFlightRulesInstalled, fetchPayloadFromGitHub, copyFrameworkFilesFrom, ensureDir } from '../utils/files.js';
+import { isFlightRulesInstalled, fetchPayloadFromGitHub, copyFrameworkFilesFrom, ensureDir, getInstalledVersion, writeManifest, getCliVersion } from '../utils/files.js';
 import { isInteractive } from '../utils/interactive.js';
 import { isCursorAdapterInstalled, setupCursorCommands } from './adapter.js';
 const DOC_FILES = [
@@ -42,6 +42,8 @@ export async function upgrade(version) {
         p.outro('Run `flight-rules init` to install Flight Rules first.');
         return;
     }
+    // Get current installed version
+    const currentVersion = getInstalledVersion(cwd);
     // Detect installed adapters before upgrade
     const cursorAdapterInstalled = isCursorAdapterInstalled(cwd);
     const agentsMdExists = existsSync(join(cwd, 'AGENTS.md'));
@@ -85,6 +87,10 @@ export async function upgrade(version) {
         p.outro('Check your network connection and try again.');
         return;
     }
+    // Show version comparison
+    if (currentVersion) {
+        p.log.info(`Current version: ${pc.yellow(currentVersion)} → ${pc.cyan(fetched.version)}`);
+    }
     if (isInteractive()) {
         const shouldContinue = await p.confirm({
             message: `Upgrade to version ${fetched.version}?`,
@@ -104,6 +110,15 @@ export async function upgrade(version) {
     spinner.start('Upgrading Flight Rules...');
     try {
         copyFrameworkFilesFrom(fetched.payloadPath, cwd);
+        // Write manifest to track deployed version
+        writeManifest(cwd, {
+            version: fetched.version,
+            deployedAt: new Date().toISOString(),
+            deployedBy: {
+                cli: getCliVersion(),
+                command: 'upgrade',
+            },
+        });
         spinner.stop('Flight Rules framework upgraded!');
     }
     catch (error) {

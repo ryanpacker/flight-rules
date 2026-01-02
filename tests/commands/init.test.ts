@@ -50,6 +50,8 @@ vi.mock('../../src/utils/files.js', () => ({
   copyPayloadFrom: vi.fn(),
   getFlightRulesDir: vi.fn((cwd: string) => join(cwd, '.flight-rules')),
   ensureDir: vi.fn(),
+  writeManifest: vi.fn(),
+  getCliVersion: vi.fn(() => '0.4.4'),
 }));
 
 // Mock adapter.js - use dynamic import pattern
@@ -69,6 +71,8 @@ import {
   fetchPayloadFromGitHub, 
   copyPayloadFrom,
   ensureDir,
+  writeManifest,
+  getCliVersion,
 } from '../../src/utils/files.js';
 import { isInteractive } from '../../src/utils/interactive.js';
 import { init } from '../../src/commands/init.js';
@@ -173,6 +177,34 @@ describe('init.ts', () => {
       await init();
       
       expect(copyPayloadFrom).toHaveBeenCalledWith(mockPayloadPath, mockCwd);
+    });
+
+    it('should write manifest after copying payload', async () => {
+      vi.mocked(p.confirm)
+        .mockResolvedValueOnce(false)
+        .mockResolvedValueOnce(false);
+      
+      await init();
+      
+      expect(writeManifest).toHaveBeenCalledWith(mockCwd, expect.objectContaining({
+        version: '0.3.2',
+        deployedBy: expect.objectContaining({
+          cli: '0.4.4',
+          command: 'init',
+        }),
+      }));
+    });
+
+    it('should include deployedAt timestamp in manifest', async () => {
+      vi.mocked(p.confirm)
+        .mockResolvedValueOnce(false)
+        .mockResolvedValueOnce(false);
+      
+      await init();
+      
+      expect(writeManifest).toHaveBeenCalledWith(mockCwd, expect.objectContaining({
+        deployedAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/),
+      }));
     });
 
     it('should cleanup after successful install', async () => {

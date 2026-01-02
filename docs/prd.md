@@ -55,6 +55,23 @@ The core problem: when an AI agent opens a project, it lacks context about what 
 
 3. **Non-interactive mode** — When stdout is not a TTY (CI environments, piped output, agent invocation), CLI commands use safe defaults: skip destructive actions (no reinstall, no overwrite), proceed with non-destructive ones (create new docs, perform upgrades).
 
+## Key Concepts
+
+### Versioning Model
+
+Flight Rules has two distinct versioning concepts:
+
+1. **CLI Version** — The version of the `flight-rules` npm package installed globally or locally. This determines what commands and capabilities are available (`init`, `upgrade`, `adapter`). Tracked in `package.json`.
+
+2. **Payload Version** — The version of Flight Rules *content* deployed into a project's `.flight-rules/` directory. This includes agent guidelines, templates, commands, and prompts. Tracked in `.flight-rules/manifest.json`.
+
+**Why this matters:** A user might have CLI v1.2.0 installed but have deployed payload v0.4.0 into a specific project. The manifest allows projects to know exactly what version of Flight Rules content they're running, independent of what CLI was used to install it.
+
+The `manifest.json` file records:
+- `version`: The payload version deployed
+- `deployedAt`: When the deployment occurred
+- `deployedBy`: What CLI version and command performed the deployment
+
 ## Success Criteria
 
 ### Primary Measure

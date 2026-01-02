@@ -28,6 +28,7 @@ vi.mock('picocolors', () => ({
     cyan: vi.fn((str) => str),
     green: vi.fn((str) => str),
     bold: vi.fn((str) => str),
+    yellow: vi.fn((str) => str),
   },
 }));
 
@@ -48,6 +49,9 @@ vi.mock('../../src/utils/files.js', () => ({
   fetchPayloadFromGitHub: vi.fn(),
   copyFrameworkFilesFrom: vi.fn(),
   ensureDir: vi.fn(),
+  getInstalledVersion: vi.fn(),
+  writeManifest: vi.fn(),
+  getCliVersion: vi.fn(() => '0.4.4'),
 }));
 
 // Mock adapter.js
@@ -68,6 +72,9 @@ import {
   fetchPayloadFromGitHub, 
   copyFrameworkFilesFrom,
   ensureDir,
+  getInstalledVersion,
+  writeManifest,
+  getCliVersion,
 } from '../../src/utils/files.js';
 import { isInteractive } from '../../src/utils/interactive.js';
 import { isCursorAdapterInstalled, setupCursorCommands } from '../../src/commands/adapter.js';
@@ -107,6 +114,9 @@ describe('upgrade.ts', () => {
     
     // Default: copyFrameworkFilesFrom succeeds
     vi.mocked(copyFrameworkFilesFrom).mockImplementation(() => {});
+    
+    // Default: no existing version (new installation)
+    vi.mocked(getInstalledVersion).mockReturnValue(null);
   });
 
   afterEach(() => {
@@ -230,6 +240,50 @@ describe('upgrade.ts', () => {
       
       await expect(upgrade()).rejects.toThrow('Copy failed');
       expect(mockCleanup).toHaveBeenCalled();
+    });
+
+    it('should write manifest after upgrading', async () => {
+      await upgrade();
+      
+      expect(writeManifest).toHaveBeenCalledWith(mockCwd, expect.objectContaining({
+        version: '0.4.0',
+        deployedBy: expect.objectContaining({
+          cli: '0.4.4',
+          command: 'upgrade',
+        }),
+      }));
+    });
+
+    it('should include deployedAt timestamp in manifest', async () => {
+      await upgrade();
+      
+      expect(writeManifest).toHaveBeenCalledWith(mockCwd, expect.objectContaining({
+        deployedAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/),
+      }));
+    });
+  });
+
+  describe('version comparison', () => {
+    it('should show current version when manifest exists', async () => {
+      vi.mocked(getInstalledVersion).mockReturnValue('0.3.0');
+      
+      await upgrade();
+      
+      expect(p.log.info).toHaveBeenCalledWith(expect.stringContaining('0.3.0'));
+      expect(p.log.info).toHaveBeenCalledWith(expect.stringContaining('0.4.0'));
+    });
+
+    it('should not show version comparison when no manifest exists', async () => {
+      vi.mocked(getInstalledVersion).mockReturnValue(null);
+      
+      await upgrade();
+      
+      // Should not have a version comparison message (only other info messages)
+      const infoCalls = vi.mocked(p.log.info).mock.calls;
+      const versionComparisonCalls = infoCalls.filter(call => 
+        String(call[0]).includes('→')
+      );
+      expect(versionComparisonCalls.length).toBe(0);
     });
   });
 

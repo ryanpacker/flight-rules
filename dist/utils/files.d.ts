@@ -1,4 +1,8 @@
 /**
+ * Get the CLI version from package.json
+ */
+export declare function getCliVersion(): string;
+/**
  * Get the path to the payload directory (the Flight Rules content to install)
  */
 export declare function getPayloadPath(): string;
@@ -44,3 +48,28 @@ export declare function copyFrameworkFilesFrom(sourcePayloadPath: string, target
  * Copy entire payload from a source directory (used by both local and remote)
  */
 export declare function copyPayloadFrom(sourcePayloadPath: string, targetDir: string): void;
+/**
+ * Manifest file structure for tracking deployed Flight Rules version
+ */
+export interface Manifest {
+    version: string;
+    deployedAt: string;
+    deployedBy: {
+        cli: string;
+        command: 'init' | 'upgrade';
+    };
+}
+/**
+ * Read the manifest.json from a Flight Rules installation
+ * @returns The manifest data, or null if not found
+ */
+export declare function readManifest(targetDir: string): Manifest | null;
+/**
+ * Write the manifest.json to a Flight Rules installation
+ */
+export declare function writeManifest(targetDir: string, data: Manifest): void;
+/**
+ * Get the current version from manifest, falling back to AGENTS.md
+ * @returns The version string, or null if not found
+ */
+export declare function getInstalledVersion(targetDir: string): string | null;

@@ -6,7 +6,10 @@ import {
   isFlightRulesInstalled, 
   fetchPayloadFromGitHub,
   copyFrameworkFilesFrom,
-  ensureDir
+  ensureDir,
+  getInstalledVersion,
+  writeManifest,
+  getCliVersion
 } from '../utils/files.js';
 import { isInteractive } from '../utils/interactive.js';
 import { 
@@ -59,6 +62,9 @@ export async function upgrade(version?: string) {
     return;
   }
   
+  // Get current installed version
+  const currentVersion = getInstalledVersion(cwd);
+  
   // Detect installed adapters before upgrade
   const cursorAdapterInstalled = isCursorAdapterInstalled(cwd);
   const agentsMdExists = existsSync(join(cwd, 'AGENTS.md'));
@@ -109,6 +115,11 @@ export async function upgrade(version?: string) {
     return;
   }
   
+  // Show version comparison
+  if (currentVersion) {
+    p.log.info(`Current version: ${pc.yellow(currentVersion)} → ${pc.cyan(fetched.version)}`);
+  }
+  
   if (isInteractive()) {
     const shouldContinue = await p.confirm({
       message: `Upgrade to version ${fetched.version}?`,
@@ -129,6 +140,17 @@ export async function upgrade(version?: string) {
   spinner.start('Upgrading Flight Rules...');
   try {
     copyFrameworkFilesFrom(fetched.payloadPath, cwd);
+    
+    // Write manifest to track deployed version
+    writeManifest(cwd, {
+      version: fetched.version,
+      deployedAt: new Date().toISOString(),
+      deployedBy: {
+        cli: getCliVersion(),
+        command: 'upgrade',
+      },
+    });
+    
     spinner.stop('Flight Rules framework upgraded!');
   } catch (error) {
     spinner.stop('Failed to upgrade Flight Rules');

@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, cpSync, createWriteStream, rmSync, readdirSync, readFileSync } from 'fs';
+import { existsSync, mkdirSync, cpSync, createWriteStream, rmSync, readdirSync, readFileSync, writeFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { tmpdir } from 'os';
@@ -7,6 +7,23 @@ import * as tar from 'tar';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const GITHUB_REPO = 'ryanpacker/flight-rules';
+/**
+ * Get the CLI version from package.json
+ */
+export function getCliVersion() {
+    // Structure: flight-rules/dist/utils/files.js
+    // Go up 2 levels to get to flight-rules/, then read package.json
+    const projectRoot = dirname(dirname(__dirname));
+    const packageJsonPath = join(projectRoot, 'package.json');
+    try {
+        const content = readFileSync(packageJsonPath, 'utf-8');
+        const pkg = JSON.parse(content);
+        return pkg.version || 'unknown';
+    }
+    catch {
+        return 'unknown';
+    }
+}
 /**
  * Get the path to the payload directory (the Flight Rules content to install)
  */
@@ -177,4 +194,52 @@ export function copyPayloadFrom(sourcePayloadPath, targetDir) {
         throw new Error(`Payload not found at ${sourcePayloadPath}`);
     }
     cpSync(sourcePayloadPath, destPath, { recursive: true });
+}
+/**
+ * Read the manifest.json from a Flight Rules installation
+ * @returns The manifest data, or null if not found
+ */
+export function readManifest(targetDir) {
+    const manifestPath = join(getFlightRulesDir(targetDir), 'manifest.json');
+    if (!existsSync(manifestPath)) {
+        return null;
+    }
+    try {
+        const content = readFileSync(manifestPath, 'utf-8');
+        return JSON.parse(content);
+    }
+    catch {
+        return null;
+    }
+}
+/**
+ * Write the manifest.json to a Flight Rules installation
+ */
+export function writeManifest(targetDir, data) {
+    const manifestPath = join(getFlightRulesDir(targetDir), 'manifest.json');
+    writeFileSync(manifestPath, JSON.stringify(data, null, 2) + '\n', 'utf-8');
+}
+/**
+ * Get the current version from manifest, falling back to AGENTS.md
+ * @returns The version string, or null if not found
+ */
+export function getInstalledVersion(targetDir) {
+    // Try manifest first
+    const manifest = readManifest(targetDir);
+    if (manifest) {
+        return manifest.version;
+    }
+    // Fall back to AGENTS.md for older installations
+    const agentsMdPath = join(getFlightRulesDir(targetDir), 'AGENTS.md');
+    if (!existsSync(agentsMdPath)) {
+        return null;
+    }
+    try {
+        const content = readFileSync(agentsMdPath, 'utf-8');
+        const match = content.match(/flight_rules_version:\s*([\d.]+)/);
+        return match ? match[1] : null;
+    }
+    catch {
+        return null;
+    }
 }
