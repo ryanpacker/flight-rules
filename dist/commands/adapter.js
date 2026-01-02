@@ -3,6 +3,7 @@ import pc from 'picocolors';
 import { writeFileSync, existsSync, readdirSync, cpSync } from 'fs';
 import { join } from 'path';
 import { ensureDir, getFlightRulesDir } from '../utils/files.js';
+import { isInteractive } from '../utils/interactive.js';
 const ADAPTERS = {
     cursor: {
         name: 'Cursor',
@@ -170,6 +171,7 @@ export function isAdapterInstalled(cwd, adapterKey) {
 }
 export async function adapter(args) {
     const cwd = process.cwd();
+    const interactive = isInteractive();
     // Parse arguments
     let selectedAdapters = [];
     if (args.includes('--all')) {
@@ -183,8 +185,16 @@ export async function adapter(args) {
             }
         }
     }
-    // If no adapters specified via args, prompt for selection
+    // If no adapters specified via args, prompt for selection (or error in non-interactive)
     if (selectedAdapters.length === 0) {
+        if (!interactive) {
+            // Non-interactive: require explicit adapter flags
+            p.log.error('No adapters specified. In non-interactive mode, use:');
+            console.log('  flight-rules adapter --cursor');
+            console.log('  flight-rules adapter --claude');
+            console.log('  flight-rules adapter --all');
+            process.exit(1);
+        }
         const selection = await p.multiselect({
             message: 'Which adapters would you like to generate?',
             options: Object.entries(ADAPTERS).map(([key, config]) => ({
@@ -202,9 +212,9 @@ export async function adapter(args) {
         }
         selectedAdapters = selection;
     }
-    await generateAdapters(selectedAdapters);
+    await generateAdapters(selectedAdapters, undefined, interactive);
 }
-export async function generateAdapters(adapterNames, sourceCommandsDir) {
+export async function generateAdapters(adapterNames, sourceCommandsDir, interactive = true) {
     const cwd = process.cwd();
     // Default to .flight-rules/commands if no source specified
     const commandsDir = sourceCommandsDir ?? join(getFlightRulesDir(cwd), 'commands');
@@ -215,12 +225,19 @@ export async function generateAdapters(adapterNames, sourceCommandsDir) {
         const filePath = join(cwd, config.filename);
         // Check if file already exists
         if (existsSync(filePath)) {
-            const overwrite = await p.confirm({
-                message: `${config.filename} already exists. Overwrite?`,
-                initialValue: false,
-            });
-            if (p.isCancel(overwrite) || !overwrite) {
-                p.log.info(`Skipped ${config.filename}`);
+            if (interactive) {
+                const overwrite = await p.confirm({
+                    message: `${config.filename} already exists. Overwrite?`,
+                    initialValue: false,
+                });
+                if (p.isCancel(overwrite) || !overwrite) {
+                    p.log.info(`Skipped ${config.filename}`);
+                    continue;
+                }
+            }
+            else {
+                // Non-interactive: skip overwrite (safe default)
+                p.log.info(`Skipped ${config.filename} (already exists)`);
                 continue;
             }
         }
@@ -229,7 +246,9 @@ export async function generateAdapters(adapterNames, sourceCommandsDir) {
         p.log.success(`Created ${pc.cyan(config.filename)} for ${config.name}`);
         // For Cursor, also set up .cursor/commands/
         if (name === 'cursor') {
-            const result = await setupCursorCommands(cwd, commandsDir);
+            // In non-interactive mode, replace commands (update to latest)
+            const skipPrompts = !interactive;
+            const result = await setupCursorCommands(cwd, commandsDir, skipPrompts);
             if (result.copied.length > 0) {
                 p.log.success(`Created ${pc.cyan('.cursor/commands/')} with ${result.copied.length} command(s)`);
             }

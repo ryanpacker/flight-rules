@@ -56,6 +56,11 @@ vi.mock('../../src/commands/adapter.js', () => ({
   setupCursorCommands: vi.fn(),
 }));
 
+// Mock interactive utility
+vi.mock('../../src/utils/interactive.js', () => ({
+  isInteractive: vi.fn(() => true), // Default to interactive
+}));
+
 import * as p from '@clack/prompts';
 import { existsSync, writeFileSync, cpSync } from 'fs';
 import { 
@@ -64,6 +69,7 @@ import {
   copyFrameworkFilesFrom,
   ensureDir,
 } from '../../src/utils/files.js';
+import { isInteractive } from '../../src/utils/interactive.js';
 import { isCursorAdapterInstalled, setupCursorCommands } from '../../src/commands/adapter.js';
 import { upgrade } from '../../src/commands/upgrade.js';
 
@@ -370,6 +376,42 @@ describe('upgrade.ts', () => {
         String(call[0]).includes('new template')
       );
       expect(newTemplateMessage).toBe(false);
+    });
+  });
+
+  describe('non-interactive mode', () => {
+    beforeEach(() => {
+      vi.mocked(isInteractive).mockReturnValue(false);
+    });
+
+    afterEach(() => {
+      vi.mocked(isInteractive).mockReturnValue(true);
+    });
+
+    it('should proceed with upgrade without confirmation prompt', async () => {
+      await upgrade();
+      
+      // Should not prompt for confirmation
+      expect(p.confirm).not.toHaveBeenCalled();
+      // Should log that upgrade is proceeding
+      expect(p.log.info).toHaveBeenCalledWith(expect.stringContaining('Upgrading to version'));
+      // Should complete the upgrade
+      expect(copyFrameworkFilesFrom).toHaveBeenCalled();
+    });
+
+    it('should complete full upgrade flow without prompts', async () => {
+      vi.mocked(isCursorAdapterInstalled).mockReturnValue(true);
+      vi.mocked(existsSync).mockImplementation((path) => {
+        return String(path).includes('AGENTS.md');
+      });
+      vi.mocked(setupCursorCommands).mockResolvedValue({ copied: ['test.md'], skipped: [] });
+      
+      await upgrade();
+      
+      expect(p.confirm).not.toHaveBeenCalled();
+      expect(copyFrameworkFilesFrom).toHaveBeenCalled();
+      expect(setupCursorCommands).toHaveBeenCalled();
+      expect(p.outro).toHaveBeenCalledWith(expect.stringContaining('Upgrade complete'));
     });
   });
 });

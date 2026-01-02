@@ -42,14 +42,21 @@ vi.mock('../../src/utils/files.js', () => ({
   getFlightRulesDir: vi.fn((cwd: string) => join(cwd, '.flight-rules')),
 }));
 
+// Mock interactive utility
+vi.mock('../../src/utils/interactive.js', () => ({
+  isInteractive: vi.fn(() => true), // Default to interactive
+}));
+
 import * as p from '@clack/prompts';
 import { existsSync, writeFileSync, readdirSync, cpSync } from 'fs';
+import { isInteractive } from '../../src/utils/interactive.js';
 import { 
   isCursorAdapterInstalled,
   isAdapterInstalled,
   copyCommandsWithConflictHandling,
   setupCursorCommands,
   generateAdapters,
+  adapter,
 } from '../../src/commands/adapter.js';
 
 describe('adapter.ts', () => {
@@ -289,6 +296,79 @@ describe('adapter.ts', () => {
       await generateAdapters(['unknown', 'fake']);
       
       expect(writeFileSync).not.toHaveBeenCalled();
+    });
+
+    describe('non-interactive mode', () => {
+      it('should skip overwrite when file exists and non-interactive', async () => {
+        vi.mocked(existsSync).mockReturnValue(true);
+        
+        await generateAdapters(['claude'], undefined, false);
+        
+        // Should not prompt
+        expect(p.confirm).not.toHaveBeenCalled();
+        // Should skip the file
+        expect(writeFileSync).not.toHaveBeenCalled();
+        expect(p.log.info).toHaveBeenCalledWith(expect.stringContaining('Skipped CLAUDE.md'));
+      });
+
+      it('should create new files without prompting in non-interactive', async () => {
+        vi.mocked(existsSync).mockReturnValue(false);
+        
+        await generateAdapters(['claude'], undefined, false);
+        
+        expect(p.confirm).not.toHaveBeenCalled();
+        expect(writeFileSync).toHaveBeenCalled();
+      });
+    });
+  });
+
+  describe('adapter command', () => {
+    describe('non-interactive mode', () => {
+      let mockExit: ReturnType<typeof vi.spyOn>;
+      
+      beforeEach(() => {
+        vi.mocked(isInteractive).mockReturnValue(false);
+        // Mock process.exit to throw so we can catch it
+        mockExit = vi.spyOn(process, 'exit').mockImplementation((code) => {
+          throw new Error(`process.exit(${code})`);
+        });
+      });
+
+      afterEach(() => {
+        vi.mocked(isInteractive).mockReturnValue(true);
+        mockExit.mockRestore();
+      });
+
+      it('should error when no adapters specified', async () => {
+        await expect(adapter([])).rejects.toThrow('process.exit(1)');
+        
+        expect(p.log.error).toHaveBeenCalledWith(expect.stringContaining('No adapters specified'));
+      });
+
+      it('should work with --cursor flag', async () => {
+        vi.mocked(existsSync).mockReturnValue(false);
+        vi.mocked(readdirSync).mockReturnValue([] as unknown as ReturnType<typeof readdirSync>);
+        
+        await adapter(['--cursor']);
+        
+        expect(p.multiselect).not.toHaveBeenCalled();
+        expect(writeFileSync).toHaveBeenCalledWith(
+          expect.stringContaining('AGENTS.md'),
+          expect.any(String),
+          'utf-8'
+        );
+      });
+
+      it('should work with --all flag', async () => {
+        vi.mocked(existsSync).mockReturnValue(false);
+        vi.mocked(readdirSync).mockReturnValue([] as unknown as ReturnType<typeof readdirSync>);
+        
+        await adapter(['--all']);
+        
+        expect(p.multiselect).not.toHaveBeenCalled();
+        // Should create both adapters
+        expect(writeFileSync).toHaveBeenCalledTimes(2);
+      });
     });
   });
 });

@@ -8,6 +8,7 @@ import {
   copyFrameworkFilesFrom,
   ensureDir
 } from '../utils/files.js';
+import { isInteractive } from '../utils/interactive.js';
 import { 
   isCursorAdapterInstalled, 
   setupCursorCommands
@@ -108,15 +109,20 @@ export async function upgrade(version?: string) {
     return;
   }
   
-  const shouldContinue = await p.confirm({
-    message: `Upgrade to version ${fetched.version}?`,
-    initialValue: true,
-  });
-  
-  if (p.isCancel(shouldContinue) || !shouldContinue) {
-    fetched.cleanup();
-    p.log.info('Upgrade cancelled.');
-    return;
+  if (isInteractive()) {
+    const shouldContinue = await p.confirm({
+      message: `Upgrade to version ${fetched.version}?`,
+      initialValue: true,
+    });
+    
+    if (p.isCancel(shouldContinue) || !shouldContinue) {
+      fetched.cleanup();
+      p.log.info('Upgrade cancelled.');
+      return;
+    }
+  } else {
+    // Non-interactive: proceed with upgrade
+    p.log.info(`Upgrading to version ${fetched.version}...`);
   }
   
   // Upgrade .flight-rules/

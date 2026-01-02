@@ -57,6 +57,11 @@ vi.mock('../../src/commands/adapter.js', () => ({
   generateAdapters: vi.fn(),
 }));
 
+// Mock interactive utility
+vi.mock('../../src/utils/interactive.js', () => ({
+  isInteractive: vi.fn(() => true), // Default to interactive
+}));
+
 import * as p from '@clack/prompts';
 import { existsSync, cpSync } from 'fs';
 import { 
@@ -65,6 +70,7 @@ import {
   copyPayloadFrom,
   ensureDir,
 } from '../../src/utils/files.js';
+import { isInteractive } from '../../src/utils/interactive.js';
 import { init } from '../../src/commands/init.js';
 
 describe('init.ts', () => {
@@ -389,6 +395,68 @@ describe('init.ts', () => {
       await init();
       
       expect(p.outro).toHaveBeenCalledWith(expect.stringContaining('ready'));
+    });
+  });
+
+  describe('non-interactive mode', () => {
+    beforeEach(() => {
+      vi.mocked(isInteractive).mockReturnValue(false);
+    });
+
+    afterEach(() => {
+      vi.mocked(isInteractive).mockReturnValue(true);
+    });
+
+    it('should skip reinstall when already installed', async () => {
+      vi.mocked(isFlightRulesInstalled).mockReturnValue(true);
+      
+      await init();
+      
+      // Should not prompt, should skip
+      expect(p.confirm).not.toHaveBeenCalled();
+      expect(p.log.info).toHaveBeenCalledWith(expect.stringContaining('Skipping reinstall'));
+      expect(fetchPayloadFromGitHub).not.toHaveBeenCalled();
+    });
+
+    it('should initialize docs without prompting', async () => {
+      // Template files exist in payload
+      vi.mocked(existsSync).mockImplementation((path) => {
+        const pathStr = String(path);
+        if (pathStr.includes('doc-templates')) return true;
+        return false;
+      });
+      
+      await init();
+      
+      // Should create docs directories without prompting
+      expect(ensureDir).toHaveBeenCalledWith(join(mockCwd, 'docs'));
+      expect(p.log.success).toHaveBeenCalledWith(expect.stringContaining('docs initialized'));
+    });
+
+    it('should skip existing docs files without prompting', async () => {
+      // Both templates and docs exist
+      vi.mocked(existsSync).mockImplementation((path) => {
+        const pathStr = String(path);
+        if (pathStr.includes('doc-templates')) return true;
+        if (pathStr.includes('docs') && !pathStr.includes('.flight-rules')) return true;
+        return false;
+      });
+      
+      await init();
+      
+      // Should not prompt for docs conflict handling
+      expect(p.select).not.toHaveBeenCalled();
+      // Should skip existing files
+      expect(p.log.success).toHaveBeenCalledWith(expect.stringContaining('skipped existing'));
+    });
+
+    it('should skip adapter generation without prompting', async () => {
+      await init();
+      
+      // Should not prompt for adapter generation
+      expect(p.multiselect).not.toHaveBeenCalled();
+      // Should log that adapters were skipped
+      expect(p.log.info).toHaveBeenCalledWith(expect.stringContaining('Skipping adapter'));
     });
   });
 });

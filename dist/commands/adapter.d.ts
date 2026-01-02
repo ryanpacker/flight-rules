@@ -21,4 +21,4 @@ export declare function isCursorAdapterInstalled(cwd: string): boolean;
  */
 export declare function isAdapterInstalled(cwd: string, adapterKey: string): boolean;
 export declare function adapter(args: string[]): Promise<void>;
-export declare function generateAdapters(adapterNames: string[], sourceCommandsDir?: string): Promise<void>;
+export declare function generateAdapters(adapterNames: string[], sourceCommandsDir?: string, interactive?: boolean): Promise<void>;

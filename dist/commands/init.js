@@ -1,6 +1,7 @@
 import * as p from '@clack/prompts';
 import pc from 'picocolors';
 import { isFlightRulesInstalled, fetchPayloadFromGitHub, copyPayloadFrom, getFlightRulesDir, ensureDir } from '../utils/files.js';
+import { isInteractive } from '../utils/interactive.js';
 import { cpSync, existsSync } from 'fs';
 import { join } from 'path';
 const DOC_FILES = [
@@ -27,14 +28,23 @@ async function copyDocsFromTemplates(templatesDir, docsDir, skipExisting) {
 }
 export async function init() {
     const cwd = process.cwd();
+    const interactive = isInteractive();
     // Check if already installed
     if (isFlightRulesInstalled(cwd)) {
-        const shouldContinue = await p.confirm({
-            message: 'Flight Rules is already installed. Do you want to reinstall? (This will overwrite existing files)',
-            initialValue: false,
-        });
-        if (p.isCancel(shouldContinue) || !shouldContinue) {
-            p.log.info('Installation cancelled.');
+        if (interactive) {
+            const shouldContinue = await p.confirm({
+                message: 'Flight Rules is already installed. Do you want to reinstall? (This will overwrite existing files)',
+                initialValue: false,
+            });
+            if (p.isCancel(shouldContinue) || !shouldContinue) {
+                p.log.info('Installation cancelled.');
+                p.outro('Run `flight-rules upgrade` to update framework files while preserving your docs.');
+                return;
+            }
+        }
+        else {
+            // Non-interactive: skip reinstall (safe default)
+            p.log.info('Flight Rules is already installed. Skipping reinstall.');
             p.outro('Run `flight-rules upgrade` to update framework files while preserving your docs.');
             return;
         }
@@ -68,13 +78,21 @@ export async function init() {
     }
     fetched.cleanup();
     // Ask about initializing docs
-    const initDocs = await p.confirm({
-        message: 'Would you like to initialize project docs from templates?',
-        initialValue: true,
-    });
-    if (p.isCancel(initDocs)) {
-        p.outro('Flight Rules installed. Run `flight-rules adapter` to generate agent adapters.');
-        return;
+    let initDocs;
+    if (interactive) {
+        const initDocsResult = await p.confirm({
+            message: 'Would you like to initialize project docs from templates?',
+            initialValue: true,
+        });
+        if (p.isCancel(initDocsResult)) {
+            p.outro('Flight Rules installed. Run `flight-rules adapter` to generate agent adapters.');
+            return;
+        }
+        initDocs = initDocsResult;
+    }
+    else {
+        // Non-interactive: default to yes (create docs)
+        initDocs = true;
     }
     if (initDocs) {
         const flightRulesDir = getFlightRulesDir(cwd);
@@ -84,21 +102,29 @@ export async function init() {
         const docsExist = existsSync(docsDir);
         let skipExisting = false;
         if (docsExist) {
-            const handleExisting = await p.select({
-                message: 'A docs/ directory already exists. How would you like to proceed?',
-                options: [
-                    { value: 'skip', label: 'Skip existing files', hint: 'only create missing files' },
-                    { value: 'overwrite', label: 'Overwrite existing files' },
-                    { value: 'cancel', label: 'Cancel docs initialization' },
-                ],
-            });
-            if (p.isCancel(handleExisting) || handleExisting === 'cancel') {
-                p.log.info('Skipped docs initialization.');
+            if (interactive) {
+                const handleExisting = await p.select({
+                    message: 'A docs/ directory already exists. How would you like to proceed?',
+                    options: [
+                        { value: 'skip', label: 'Skip existing files', hint: 'only create missing files' },
+                        { value: 'overwrite', label: 'Overwrite existing files' },
+                        { value: 'cancel', label: 'Cancel docs initialization' },
+                    ],
+                });
+                if (p.isCancel(handleExisting) || handleExisting === 'cancel') {
+                    p.log.info('Skipped docs initialization.');
+                }
+                else {
+                    skipExisting = handleExisting === 'skip';
+                    await copyDocsFromTemplates(templatesDir, docsDir, skipExisting);
+                    p.log.success('Project docs initialized from templates.');
+                }
             }
             else {
-                skipExisting = handleExisting === 'skip';
+                // Non-interactive: skip existing files (safe default)
+                skipExisting = true;
                 await copyDocsFromTemplates(templatesDir, docsDir, skipExisting);
-                p.log.success('Project docs initialized from templates.');
+                p.log.success('Project docs initialized from templates (skipped existing files).');
             }
         }
         else {
@@ -107,30 +133,36 @@ export async function init() {
         }
     }
     // Ask about generating adapters
-    const generateAdapters = await p.confirm({
-        message: 'Would you like to generate agent adapter files?',
-        initialValue: true,
-    });
-    if (p.isCancel(generateAdapters)) {
-        p.outro('Done! Your project now has Flight Rules.');
-        return;
-    }
-    if (generateAdapters) {
-        const adapters = await p.multiselect({
-            message: 'Which adapters would you like to generate?',
-            options: [
-                { value: 'cursor', label: 'Cursor (AGENTS.md + .cursor/commands/)', hint: 'recommended' },
-                { value: 'claude', label: 'Claude Code (CLAUDE.md)' },
-            ],
-            initialValues: ['cursor'],
+    if (interactive) {
+        const generateAdaptersResult = await p.confirm({
+            message: 'Would you like to generate agent adapter files?',
+            initialValue: true,
         });
-        if (p.isCancel(adapters)) {
+        if (p.isCancel(generateAdaptersResult)) {
             p.outro('Done! Your project now has Flight Rules.');
             return;
         }
-        // Import and run adapter generation
-        const { generateAdapters: genAdapters } = await import('./adapter.js');
-        await genAdapters(adapters);
+        if (generateAdaptersResult) {
+            const adapters = await p.multiselect({
+                message: 'Which adapters would you like to generate?',
+                options: [
+                    { value: 'cursor', label: 'Cursor (AGENTS.md + .cursor/commands/)', hint: 'recommended' },
+                    { value: 'claude', label: 'Claude Code (CLAUDE.md)' },
+                ],
+                initialValues: ['cursor'],
+            });
+            if (p.isCancel(adapters)) {
+                p.outro('Done! Your project now has Flight Rules.');
+                return;
+            }
+            // Import and run adapter generation
+            const { generateAdapters: genAdapters } = await import('./adapter.js');
+            await genAdapters(adapters);
+        }
+    }
+    else {
+        // Non-interactive: skip adapter generation (user can run `flight-rules adapter` separately)
+        p.log.info('Skipping adapter generation. Run `flight-rules adapter --cursor` or `--claude` to generate adapters.');
     }
     p.outro(pc.green('Flight Rules is ready! Start with: "start coding session"'));
 }

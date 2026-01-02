@@ -3,6 +3,7 @@ import pc from 'picocolors';
 import { existsSync, cpSync } from 'fs';
 import { join } from 'path';
 import { isFlightRulesInstalled, fetchPayloadFromGitHub, copyFrameworkFilesFrom, ensureDir } from '../utils/files.js';
+import { isInteractive } from '../utils/interactive.js';
 import { isCursorAdapterInstalled, setupCursorCommands } from './adapter.js';
 const DOC_FILES = [
     { src: 'prd.md', dest: 'prd.md' },
@@ -84,14 +85,20 @@ export async function upgrade(version) {
         p.outro('Check your network connection and try again.');
         return;
     }
-    const shouldContinue = await p.confirm({
-        message: `Upgrade to version ${fetched.version}?`,
-        initialValue: true,
-    });
-    if (p.isCancel(shouldContinue) || !shouldContinue) {
-        fetched.cleanup();
-        p.log.info('Upgrade cancelled.');
-        return;
+    if (isInteractive()) {
+        const shouldContinue = await p.confirm({
+            message: `Upgrade to version ${fetched.version}?`,
+            initialValue: true,
+        });
+        if (p.isCancel(shouldContinue) || !shouldContinue) {
+            fetched.cleanup();
+            p.log.info('Upgrade cancelled.');
+            return;
+        }
+    }
+    else {
+        // Non-interactive: proceed with upgrade
+        p.log.info(`Upgrading to version ${fetched.version}...`);
     }
     // Upgrade .flight-rules/
     spinner.start('Upgrading Flight Rules...');
