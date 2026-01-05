@@ -44,9 +44,11 @@ The core problem: when an AI agent opens a project, it lacks context about what 
 
 6. **As an AI agent or CI system**, I want Flight Rules CLI to work without interactive prompts so that I can automate installations and upgrades.
 
+7. **As a developer using AI coding tools**, I want consistent editor settings so that formatting differences (like trailing newlines) don't create phantom uncommitted changes after commits.
+
 ## Constraints
 
-1. **Careful handling of user-owned directories** — Flight Rules operates in directories the user also owns (`docs/`, `.cursor/commands/`). The rules:
+1. **Careful handling of user-owned directories** — Flight Rules operates in directories the user also owns (`docs/`, `.cursor/commands/`, and optionally `.editorconfig`). The rules:
    - **Adding new files:** Common and expected (e.g., `prd.create` writes `docs/prd.md`, upgrades add new templates)
    - **Updating existing files:** Rare and requires care. Ideally, detect whether a file has been user-modified vs. left as a template. If unmodified, safe to update; if modified, notify rather than overwrite.
    - **Over-communicate:** Any changes to user-owned directories should be explicit and transparent

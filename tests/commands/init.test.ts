@@ -490,6 +490,114 @@ describe('init.ts', () => {
       // Should log that adapters were skipped
       expect(p.log.info).toHaveBeenCalledWith(expect.stringContaining('Skipping adapter'));
     });
+
+    it('should skip editorconfig installation without prompting', async () => {
+      await init();
+      
+      // Should not copy .editorconfig in non-interactive mode
+      expect(cpSync).not.toHaveBeenCalledWith(
+        expect.stringContaining('.editorconfig'),
+        expect.any(String)
+      );
+    });
+  });
+
+  describe('editorconfig installation', () => {
+    it('should prompt for editorconfig installation', async () => {
+      // Setup: payload .editorconfig exists
+      vi.mocked(existsSync).mockImplementation((path) => {
+        const pathStr = String(path);
+        if (pathStr.includes('.flight-rules') && pathStr.endsWith('.editorconfig')) return true;
+        return false;
+      });
+      
+      vi.mocked(p.confirm)
+        .mockResolvedValueOnce(false)  // init docs
+        .mockResolvedValueOnce(false)  // generate adapters
+        .mockResolvedValueOnce(true);  // install editorconfig
+      
+      await init();
+      
+      expect(p.confirm).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining('.editorconfig'),
+        })
+      );
+    });
+
+    it('should install editorconfig when user confirms', async () => {
+      // Setup: payload .editorconfig exists, project .editorconfig does not
+      vi.mocked(existsSync).mockImplementation((path) => {
+        const pathStr = String(path);
+        if (pathStr.includes('.flight-rules') && pathStr.endsWith('.editorconfig')) return true;
+        return false;
+      });
+      
+      vi.mocked(p.confirm)
+        .mockResolvedValueOnce(false)  // init docs
+        .mockResolvedValueOnce(false)  // generate adapters
+        .mockResolvedValueOnce(true);  // install editorconfig
+      
+      await init();
+      
+      expect(cpSync).toHaveBeenCalledWith(
+        join(mockCwd, '.flight-rules/.editorconfig'),
+        join(mockCwd, '.editorconfig')
+      );
+      expect(p.log.success).toHaveBeenCalledWith(expect.stringContaining('.editorconfig'));
+    });
+
+    it('should not install editorconfig when user declines', async () => {
+      vi.mocked(p.confirm)
+        .mockResolvedValueOnce(false)  // init docs
+        .mockResolvedValueOnce(false)  // generate adapters
+        .mockResolvedValueOnce(false); // install editorconfig
+      
+      await init();
+      
+      expect(cpSync).not.toHaveBeenCalledWith(
+        expect.stringContaining('.editorconfig'),
+        expect.any(String)
+      );
+    });
+
+    it('should skip prompt when .editorconfig already exists', async () => {
+      // Setup: .editorconfig already exists in project root
+      vi.mocked(existsSync).mockImplementation((path) => {
+        const pathStr = String(path);
+        if (pathStr === join(mockCwd, '.editorconfig')) return true;
+        return false;
+      });
+      
+      vi.mocked(p.confirm)
+        .mockResolvedValueOnce(false)  // init docs
+        .mockResolvedValueOnce(false); // generate adapters
+      
+      await init();
+      
+      // Should only have 2 confirm calls (docs + adapters), not 3
+      expect(p.confirm).toHaveBeenCalledTimes(2);
+      // Should not copy
+      expect(cpSync).not.toHaveBeenCalledWith(
+        expect.stringContaining('.editorconfig'),
+        expect.any(String)
+      );
+    });
+
+    it('should handle cancelled editorconfig prompt gracefully', async () => {
+      vi.mocked(existsSync).mockReturnValue(false);
+      
+      vi.mocked(p.confirm)
+        .mockResolvedValueOnce(false)  // init docs
+        .mockResolvedValueOnce(false)  // generate adapters
+        .mockResolvedValueOnce(Symbol.for('cancel')); // cancel editorconfig
+      vi.mocked(p.isCancel).mockImplementation((value) => value === Symbol.for('cancel'));
+      
+      await init();
+      
+      // Should still complete without error
+      expect(p.outro).toHaveBeenCalledWith(expect.stringContaining('ready'));
+    });
   });
 });
 
