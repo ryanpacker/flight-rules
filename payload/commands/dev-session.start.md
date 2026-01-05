@@ -50,3 +50,4 @@ Present the plan to the user and ask:
 > "The session plan has been documented in `docs/session_logs/YYYYMMDD_HHMM_session.md`. Are you ready for me to begin implementing this plan?"
 
 **Do not begin implementation until the user confirms.**
+

@@ -26,7 +26,7 @@ function generateAdapterContent(config) {
         ? `\`.cursor/commands/\` (as slash commands)`
         : `\`.flight-rules/commands/\``;
     const commandInstructions = config.hasNativeCommands
-        ? `Use the \`/start-coding-session\` and \`/end-coding-session\` slash commands.`
+        ? `Use the \`/dev-session.start\` and \`/dev-session.end\` slash commands.`
         : `When the user says "start coding session" or "end coding session", follow the instructions in \`.flight-rules/commands/\`.`;
     return `# ${config.title}
 

@@ -31,7 +31,7 @@ vi.mock('fs', async () => {
     ...actual,
     existsSync: vi.fn(),
     writeFileSync: vi.fn(),
-    readdirSync: vi.fn(() => ['start-coding-session.md', 'end-coding-session.md']),
+    readdirSync: vi.fn(() => ['dev-session.start.md', 'dev-session.end.md']),
     cpSync: vi.fn(),
   };
 });
@@ -137,7 +137,7 @@ describe('adapter.ts', () => {
         // Destination files don't exist
         return false;
       });
-      vi.mocked(readdirSync).mockReturnValue(['start-coding-session.md', 'end-coding-session.md'] as unknown as ReturnType<typeof readdirSync>);
+      vi.mocked(readdirSync).mockReturnValue(['dev-session.start.md', 'dev-session.end.md'] as unknown as ReturnType<typeof readdirSync>);
       
       const result = await copyCommandsWithConflictHandling('/source/commands', '/dest/commands');
       
@@ -148,7 +148,7 @@ describe('adapter.ts', () => {
 
     it('should skip prompts and replace when skipPrompts is true', async () => {
       vi.mocked(existsSync).mockReturnValue(true); // All files exist
-      vi.mocked(readdirSync).mockReturnValue(['start-coding-session.md'] as unknown as ReturnType<typeof readdirSync>);
+      vi.mocked(readdirSync).mockReturnValue(['dev-session.start.md'] as unknown as ReturnType<typeof readdirSync>);
       
       const result = await copyCommandsWithConflictHandling('/source', '/dest', true);
       
@@ -213,11 +213,11 @@ describe('adapter.ts', () => {
         // Destination files don't exist
         return false;
       });
-      vi.mocked(readdirSync).mockReturnValue(['start-coding-session.md'] as unknown as ReturnType<typeof readdirSync>);
+      vi.mocked(readdirSync).mockReturnValue(['dev-session.start.md'] as unknown as ReturnType<typeof readdirSync>);
       
       const result = await setupCursorCommands('/project', '/source/commands');
       
-      expect(result.copied).toContain('start-coding-session.md');
+      expect(result.copied).toContain('dev-session.start.md');
     });
   });
 

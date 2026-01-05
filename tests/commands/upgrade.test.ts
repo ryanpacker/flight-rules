@@ -291,7 +291,7 @@ describe('upgrade.ts', () => {
     it('should upgrade Cursor commands when installed', async () => {
       vi.mocked(isCursorAdapterInstalled).mockReturnValue(true);
       vi.mocked(setupCursorCommands).mockResolvedValue({ 
-        copied: ['start-coding-session.md'], 
+        copied: ['dev-session.start.md'], 
         skipped: [] 
       });
       

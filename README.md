@@ -82,8 +82,8 @@ Flight Rules distinguishes between:
 
 Two core flows:
 
-- **`start-coding-session`** — Review context, set goals, create a plan
-- **`end-coding-session`** — Summarize work, update progress, capture learnings
+- **`dev-session.start`** — Review context, set goals, create a plan
+- **`dev-session.end`** — Summarize work, update progress, capture learnings
 
 Agents don't start these flows on their own; you explicitly invoke them.
 
@@ -125,8 +125,8 @@ your-project/
     │   └── implementation/
     │       └── overview.md
     ├── commands/
-    │   ├── start-coding-session.md
-    │   ├── end-coding-session.md
+    │   ├── dev-session.start.md
+    │   ├── dev-session.end.md
     │   ├── test.add.md
     │   └── test.assess-current.md
     └── prompts/              # Reusable prompt templates
