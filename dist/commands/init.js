@@ -173,5 +173,25 @@ export async function init() {
         // Non-interactive: skip adapter generation (user can run `flight-rules adapter` separately)
         p.log.info('Skipping adapter generation. Run `flight-rules adapter --cursor` or `--claude` to generate adapters.');
     }
+    // Ask about installing .editorconfig
+    const editorConfigPath = join(cwd, '.editorconfig');
+    const editorConfigExists = existsSync(editorConfigPath);
+    if (!editorConfigExists) {
+        if (interactive) {
+            const installEditorConfig = await p.confirm({
+                message: 'Would you like to add a standard .editorconfig? (helps prevent formatting diffs)',
+                initialValue: true,
+            });
+            if (!p.isCancel(installEditorConfig) && installEditorConfig) {
+                const flightRulesDir = getFlightRulesDir(cwd);
+                const srcEditorConfig = join(flightRulesDir, '.editorconfig');
+                if (existsSync(srcEditorConfig)) {
+                    cpSync(srcEditorConfig, editorConfigPath);
+                    p.log.success('Added .editorconfig to project root.');
+                }
+            }
+        }
+        // Non-interactive: skip .editorconfig installation (safe default)
+    }
     p.outro(pc.green('Flight Rules is ready! Start with: "start coding session"'));
 }
