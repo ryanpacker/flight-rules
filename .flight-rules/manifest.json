@@ -1,6 +1,6 @@
 {
-  "version": "0.5.1",
-  "deployedAt": "2026-01-02T02:31:08.846Z",
+  "version": "0.5.4",
+  "deployedAt": "2026-01-07T23:36:54.182Z",
   "deployedBy": {
     "cli": "0.5.1",
     "command": "upgrade"

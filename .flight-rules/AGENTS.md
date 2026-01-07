@@ -1,6 +1,6 @@
 # Flight Rules – Agent Guidelines
 
-flight_rules_version: 0.5.1
+flight_rules_version: 0.5.4
 
 This file defines how agents (Claude Code, Cursor, etc.) should work on software projects using the Flight Rules system.
 
@@ -140,14 +140,14 @@ When working on code:
 
 The user will explicitly start and end sessions using commands or workflows like:
 
-- **"start coding session"** → use `.flight-rules/commands/start-coding-session.md`
-- **"end coding session"**   → use `.flight-rules/commands/end-coding-session.md`
+- **"start coding session"** → use `.flight-rules/commands/dev-session.start.md`
+- **"end coding session"**   → use `.flight-rules/commands/dev-session.end.md`
 
 Agents **must not** initiate these workflows on their own; they are only run when the user asks.
 
 ### 4.1 Start coding session
 
-When the user triggers a start session command, follow the process defined in `.flight-rules/commands/start-coding-session.md`. The generic behavior:
+When the user triggers a start session command, follow the process defined in `.flight-rules/commands/dev-session.start.md`. The generic behavior:
 
 1. **Review project context**
    - Read `docs/prd.md`, `docs/implementation/overview.md`, relevant spec files, and `docs/progress.md`.
@@ -177,7 +177,7 @@ When the user triggers a start session command, follow the process defined in `.
 
 ### 4.2 End coding session
 
-When the user triggers an end session command, follow the process in `.flight-rules/commands/end-coding-session.md`. Generic behavior:
+When the user triggers an end session command, follow the process in `.flight-rules/commands/dev-session.end.md`. Generic behavior:
 
 1. **Review sandbox / scratch files**  
    - Identify temporary / sandbox code and determine, with the user, what to keep vs delete.

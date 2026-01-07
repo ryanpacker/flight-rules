@@ -26,4 +26,4 @@ Please read `.flight-rules/AGENTS.md` for complete guidelines on:
 - Coding sessions
 - How to work with this system
 
-Use the `/dev-session.start` and `/dev-session.end` slash commands.
+Use the `/start-coding-session` and `/end-coding-session` slash commands.
