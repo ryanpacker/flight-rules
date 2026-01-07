@@ -50,11 +50,13 @@ vi.mock('../../src/utils/interactive.js', () => ({
 import * as p from '@clack/prompts';
 import { existsSync, writeFileSync, readdirSync, cpSync } from 'fs';
 import { isInteractive } from '../../src/utils/interactive.js';
-import { 
+import {
   isCursorAdapterInstalled,
+  isClaudeAdapterInstalled,
   isAdapterInstalled,
   copyCommandsWithConflictHandling,
   setupCursorCommands,
+  setupClaudeCommands,
   generateAdapters,
   adapter,
 } from '../../src/commands/adapter.js';
@@ -73,18 +75,37 @@ describe('adapter.ts', () => {
   describe('isCursorAdapterInstalled', () => {
     it('should return true when .cursor/commands/ exists', () => {
       vi.mocked(existsSync).mockReturnValue(true);
-      
+
       const result = isCursorAdapterInstalled('/some/project');
-      
+
       expect(result).toBe(true);
       expect(existsSync).toHaveBeenCalledWith('/some/project/.cursor/commands');
     });
 
     it('should return false when .cursor/commands/ does not exist', () => {
       vi.mocked(existsSync).mockReturnValue(false);
-      
+
       const result = isCursorAdapterInstalled('/some/project');
-      
+
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('isClaudeAdapterInstalled', () => {
+    it('should return true when .claude/commands/ exists', () => {
+      vi.mocked(existsSync).mockReturnValue(true);
+
+      const result = isClaudeAdapterInstalled('/some/project');
+
+      expect(result).toBe(true);
+      expect(existsSync).toHaveBeenCalledWith('/some/project/.claude/commands');
+    });
+
+    it('should return false when .claude/commands/ does not exist', () => {
+      vi.mocked(existsSync).mockReturnValue(false);
+
+      const result = isClaudeAdapterInstalled('/some/project');
+
       expect(result).toBe(false);
     });
   });
@@ -114,9 +135,19 @@ describe('adapter.ts', () => {
       vi.mocked(existsSync).mockImplementation((path) => {
         return String(path).includes('CLAUDE.md');
       });
-      
+
       const result = isAdapterInstalled('/project', 'claude');
-      
+
+      expect(result).toBe(true);
+    });
+
+    it('should return true for claude if .claude/commands exists', () => {
+      vi.mocked(existsSync).mockImplementation((path) => {
+        return String(path).includes('.claude/commands');
+      });
+
+      const result = isAdapterInstalled('/project', 'claude');
+
       expect(result).toBe(true);
     });
 
@@ -214,9 +245,26 @@ describe('adapter.ts', () => {
         return false;
       });
       vi.mocked(readdirSync).mockReturnValue(['dev-session.start.md'] as unknown as ReturnType<typeof readdirSync>);
-      
+
       const result = await setupCursorCommands('/project', '/source/commands');
-      
+
+      expect(result.copied).toContain('dev-session.start.md');
+    });
+  });
+
+  describe('setupClaudeCommands', () => {
+    it('should create .claude/commands directory and copy commands', async () => {
+      vi.mocked(existsSync).mockImplementation((path) => {
+        const pathStr = String(path);
+        // Source directory exists
+        if (pathStr === '/source/commands') return true;
+        // Destination files don't exist
+        return false;
+      });
+      vi.mocked(readdirSync).mockReturnValue(['dev-session.start.md'] as unknown as ReturnType<typeof readdirSync>);
+
+      const result = await setupClaudeCommands('/project', '/source/commands');
+
       expect(result.copied).toContain('dev-session.start.md');
     });
   });
@@ -237,12 +285,39 @@ describe('adapter.ts', () => {
 
     it('should generate CLAUDE.md for claude adapter', async () => {
       vi.mocked(existsSync).mockReturnValue(false);
-      
+      vi.mocked(readdirSync).mockReturnValue([] as unknown as ReturnType<typeof readdirSync>);
+
       await generateAdapters(['claude']);
-      
+
       expect(writeFileSync).toHaveBeenCalledWith(
         '/mock/project/CLAUDE.md',
         expect.stringContaining('Flight Rules – Claude Code Adapter'),
+        'utf-8'
+      );
+    });
+
+    it('should generate CLAUDE.md with .claude/commands/ reference', async () => {
+      vi.mocked(existsSync).mockReturnValue(false);
+      vi.mocked(readdirSync).mockReturnValue([] as unknown as ReturnType<typeof readdirSync>);
+
+      await generateAdapters(['claude']);
+
+      expect(writeFileSync).toHaveBeenCalledWith(
+        '/mock/project/CLAUDE.md',
+        expect.stringContaining('.claude/commands/'),
+        'utf-8'
+      );
+    });
+
+    it('should generate CLAUDE.md with slash command instructions', async () => {
+      vi.mocked(existsSync).mockReturnValue(false);
+      vi.mocked(readdirSync).mockReturnValue([] as unknown as ReturnType<typeof readdirSync>);
+
+      await generateAdapters(['claude']);
+
+      expect(writeFileSync).toHaveBeenCalledWith(
+        '/mock/project/CLAUDE.md',
+        expect.stringContaining('/dev-session.start'),
         'utf-8'
       );
     });

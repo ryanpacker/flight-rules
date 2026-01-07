@@ -17,6 +17,17 @@ export declare function setupCursorCommands(cwd: string, sourceCommandsDir: stri
  */
 export declare function isCursorAdapterInstalled(cwd: string): boolean;
 /**
+ * Setup Claude Code-specific directories and commands
+ */
+export declare function setupClaudeCommands(cwd: string, sourceCommandsDir: string, skipPrompts?: boolean): Promise<{
+    copied: string[];
+    skipped: string[];
+}>;
+/**
+ * Check if Claude Code adapter is installed (has .claude/commands/)
+ */
+export declare function isClaudeAdapterInstalled(cwd: string): boolean;
+/**
  * Check if a specific adapter file exists
  */
 export declare function isAdapterInstalled(cwd: string, adapterKey: string): boolean;

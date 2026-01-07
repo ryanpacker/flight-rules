@@ -4,7 +4,7 @@ import { existsSync, cpSync } from 'fs';
 import { join } from 'path';
 import { isFlightRulesInstalled, fetchPayloadFromGitHub, copyFrameworkFilesFrom, ensureDir, getInstalledVersion, writeManifest, getCliVersion } from '../utils/files.js';
 import { isInteractive } from '../utils/interactive.js';
-import { isCursorAdapterInstalled, setupCursorCommands } from './adapter.js';
+import { isCursorAdapterInstalled, isClaudeAdapterInstalled, setupCursorCommands, setupClaudeCommands, } from './adapter.js';
 const DOC_FILES = [
     { src: 'prd.md', dest: 'prd.md' },
     { src: 'progress.md', dest: 'progress.md' },
@@ -46,6 +46,7 @@ export async function upgrade(version) {
     const currentVersion = getInstalledVersion(cwd);
     // Detect installed adapters before upgrade
     const cursorAdapterInstalled = isCursorAdapterInstalled(cwd);
+    const claudeAdapterInstalled = isClaudeAdapterInstalled(cwd);
     const agentsMdExists = existsSync(join(cwd, 'AGENTS.md'));
     const claudeMdExists = existsSync(join(cwd, 'CLAUDE.md'));
     // Show what will be upgraded
@@ -56,6 +57,9 @@ export async function upgrade(version) {
     const adaptersToUpgrade = [];
     if (cursorAdapterInstalled) {
         adaptersToUpgrade.push('Cursor (.cursor/commands/)');
+    }
+    if (claudeAdapterInstalled) {
+        adaptersToUpgrade.push('Claude Code (.claude/commands/)');
     }
     if (agentsMdExists) {
         adaptersToUpgrade.push('AGENTS.md');
@@ -146,6 +150,13 @@ export async function upgrade(version) {
                     p.log.success(`Updated ${result.copied.length} command(s) in .cursor/commands/`);
                 }
             }
+            // Upgrade Claude commands if installed
+            if (claudeAdapterInstalled) {
+                const result = await setupClaudeCommands(cwd, sourceCommandsDir, true); // skipPrompts = true for upgrade
+                if (result.copied.length > 0) {
+                    p.log.success(`Updated ${result.copied.length} command(s) in .claude/commands/`);
+                }
+            }
             // Regenerate adapter files
             const adaptersToRegenerate = [];
             if (agentsMdExists) {
@@ -184,19 +195,21 @@ async function regenerateAdapterFile(cwd, adapterName, _sourceCommandsDir) {
             title: 'Flight Rules – Cursor Adapter',
             description: 'This file is placed at the project root as `AGENTS.md` for Cursor compatibility.',
             hasNativeCommands: true,
+            commandsDirectory: '.cursor/commands',
         },
         claude: {
             filename: 'CLAUDE.md',
             title: 'Flight Rules – Claude Code Adapter',
             description: 'This file is placed at the project root as `CLAUDE.md` for Claude Code compatibility.',
-            hasNativeCommands: false,
+            hasNativeCommands: true,
+            commandsDirectory: '.claude/commands',
         },
     };
     const config = ADAPTERS[adapterName];
     if (!config)
         return;
-    const commandLocation = config.hasNativeCommands
-        ? `\`.cursor/commands/\` (as slash commands)`
+    const commandLocation = config.hasNativeCommands && config.commandsDirectory
+        ? `\`${config.commandsDirectory}/\` (as slash commands)`
         : `\`.flight-rules/commands/\``;
     const commandInstructions = config.hasNativeCommands
         ? `Use the \`/dev-session.start\` and \`/dev-session.end\` slash commands.`

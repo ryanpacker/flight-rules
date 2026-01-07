@@ -11,19 +11,21 @@ const ADAPTERS = {
         title: 'Flight Rules – Cursor Adapter',
         description: 'This file is placed at the project root as `AGENTS.md` for Cursor compatibility.',
         hasNativeCommands: true,
+        commandsDirectory: '.cursor/commands',
     },
     claude: {
         name: 'Claude Code',
         filename: 'CLAUDE.md',
         title: 'Flight Rules – Claude Code Adapter',
         description: 'This file is placed at the project root as `CLAUDE.md` for Claude Code compatibility.',
-        hasNativeCommands: false,
+        hasNativeCommands: true,
+        commandsDirectory: '.claude/commands',
     },
 };
 function generateAdapterContent(config) {
     // Adapter-specific command instructions
-    const commandLocation = config.hasNativeCommands
-        ? `\`.cursor/commands/\` (as slash commands)`
+    const commandLocation = config.hasNativeCommands && config.commandsDirectory
+        ? `\`${config.commandsDirectory}/\` (as slash commands)`
         : `\`.flight-rules/commands/\``;
     const commandInstructions = config.hasNativeCommands
         ? `Use the \`/dev-session.start\` and \`/dev-session.end\` slash commands.`
@@ -157,6 +159,24 @@ export function isCursorAdapterInstalled(cwd) {
     return existsSync(join(cwd, '.cursor', 'commands'));
 }
 /**
+ * Setup Claude Code-specific directories and commands
+ */
+export async function setupClaudeCommands(cwd, sourceCommandsDir, skipPrompts = false) {
+    const claudeDir = join(cwd, '.claude');
+    const claudeCommandsDir = join(claudeDir, 'commands');
+    // Create directories
+    ensureDir(claudeDir);
+    ensureDir(claudeCommandsDir);
+    // Copy commands with conflict handling
+    return copyCommandsWithConflictHandling(sourceCommandsDir, claudeCommandsDir, skipPrompts);
+}
+/**
+ * Check if Claude Code adapter is installed (has .claude/commands/)
+ */
+export function isClaudeAdapterInstalled(cwd) {
+    return existsSync(join(cwd, '.claude', 'commands'));
+}
+/**
  * Check if a specific adapter file exists
  */
 export function isAdapterInstalled(cwd, adapterKey) {
@@ -166,6 +186,10 @@ export function isAdapterInstalled(cwd, adapterKey) {
     if (adapterKey === 'cursor') {
         // For Cursor, check both AGENTS.md and .cursor/commands/
         return existsSync(join(cwd, config.filename)) || isCursorAdapterInstalled(cwd);
+    }
+    if (adapterKey === 'claude') {
+        // For Claude, check both CLAUDE.md and .claude/commands/
+        return existsSync(join(cwd, config.filename)) || isClaudeAdapterInstalled(cwd);
     }
     return existsSync(join(cwd, config.filename));
 }
@@ -199,8 +223,8 @@ export async function adapter(args) {
             message: 'Which adapters would you like to generate?',
             options: Object.entries(ADAPTERS).map(([key, config]) => ({
                 value: key,
-                label: key === 'cursor'
-                    ? `${config.name} (${config.filename} + .cursor/commands/)`
+                label: config.commandsDirectory
+                    ? `${config.name} (${config.filename} + ${config.commandsDirectory}/)`
                     : `${config.name} (${config.filename})`,
                 hint: key === 'cursor' ? 'recommended' : undefined,
             })),
@@ -254,6 +278,18 @@ export async function generateAdapters(adapterNames, sourceCommandsDir, interact
             }
             if (result.skipped.length > 0) {
                 p.log.info(`Skipped ${result.skipped.length} existing command(s) in .cursor/commands/`);
+            }
+        }
+        // For Claude, also set up .claude/commands/
+        if (name === 'claude') {
+            // In non-interactive mode, replace commands (update to latest)
+            const skipPrompts = !interactive;
+            const result = await setupClaudeCommands(cwd, commandsDir, skipPrompts);
+            if (result.copied.length > 0) {
+                p.log.success(`Created ${pc.cyan('.claude/commands/')} with ${result.copied.length} command(s)`);
+            }
+            if (result.skipped.length > 0) {
+                p.log.info(`Skipped ${result.skipped.length} existing command(s) in .claude/commands/`);
             }
         }
     }

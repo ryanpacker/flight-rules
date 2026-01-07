@@ -57,7 +57,9 @@ vi.mock('../../src/utils/files.js', () => ({
 // Mock adapter.js
 vi.mock('../../src/commands/adapter.js', () => ({
   isCursorAdapterInstalled: vi.fn(),
+  isClaudeAdapterInstalled: vi.fn(),
   setupCursorCommands: vi.fn(),
+  setupClaudeCommands: vi.fn(),
 }));
 
 // Mock interactive utility
@@ -77,7 +79,7 @@ import {
   getCliVersion,
 } from '../../src/utils/files.js';
 import { isInteractive } from '../../src/utils/interactive.js';
-import { isCursorAdapterInstalled, setupCursorCommands } from '../../src/commands/adapter.js';
+import { isCursorAdapterInstalled, isClaudeAdapterInstalled, setupCursorCommands, setupClaudeCommands } from '../../src/commands/adapter.js';
 import { upgrade } from '../../src/commands/upgrade.js';
 
 describe('upgrade.ts', () => {
@@ -94,6 +96,7 @@ describe('upgrade.ts', () => {
     
     // Default: no adapters installed
     vi.mocked(isCursorAdapterInstalled).mockReturnValue(false);
+    vi.mocked(isClaudeAdapterInstalled).mockReturnValue(false);
     vi.mocked(existsSync).mockReturnValue(false);
     
     // Default: successful fetch
@@ -111,6 +114,7 @@ describe('upgrade.ts', () => {
     
     // Default: setup commands succeeds
     vi.mocked(setupCursorCommands).mockResolvedValue({ copied: [], skipped: [] });
+    vi.mocked(setupClaudeCommands).mockResolvedValue({ copied: [], skipped: [] });
     
     // Default: copyFrameworkFilesFrom succeeds
     vi.mocked(copyFrameworkFilesFrom).mockImplementation(() => {});
@@ -138,9 +142,17 @@ describe('upgrade.ts', () => {
   describe('adapter detection', () => {
     it('should detect Cursor adapter when .cursor/commands exists', async () => {
       vi.mocked(isCursorAdapterInstalled).mockReturnValue(true);
-      
+
       await upgrade();
-      
+
+      expect(p.log.info).toHaveBeenCalledWith(expect.stringContaining('Installed adapters'));
+    });
+
+    it('should detect Claude adapter when .claude/commands exists', async () => {
+      vi.mocked(isClaudeAdapterInstalled).mockReturnValue(true);
+
+      await upgrade();
+
       expect(p.log.info).toHaveBeenCalledWith(expect.stringContaining('Installed adapters'));
     });
 
@@ -148,9 +160,9 @@ describe('upgrade.ts', () => {
       vi.mocked(existsSync).mockImplementation((path) => {
         return String(path).includes('AGENTS.md');
       });
-      
+
       await upgrade();
-      
+
       expect(p.log.info).toHaveBeenCalledWith(expect.stringContaining('Installed adapters'));
     });
 
@@ -158,9 +170,9 @@ describe('upgrade.ts', () => {
       vi.mocked(existsSync).mockImplementation((path) => {
         return String(path).includes('CLAUDE.md');
       });
-      
+
       await upgrade();
-      
+
       expect(p.log.info).toHaveBeenCalledWith(expect.stringContaining('Installed adapters'));
     });
   });
@@ -290,19 +302,48 @@ describe('upgrade.ts', () => {
   describe('adapter upgrades', () => {
     it('should upgrade Cursor commands when installed', async () => {
       vi.mocked(isCursorAdapterInstalled).mockReturnValue(true);
-      vi.mocked(setupCursorCommands).mockResolvedValue({ 
-        copied: ['dev-session.start.md'], 
-        skipped: [] 
+      vi.mocked(setupCursorCommands).mockResolvedValue({
+        copied: ['dev-session.start.md'],
+        skipped: []
       });
-      
+
       await upgrade();
-      
+
       expect(setupCursorCommands).toHaveBeenCalledWith(
         mockCwd,
         join(mockPayloadPath, 'commands'),
         true // skipPrompts
       );
       expect(p.log.success).toHaveBeenCalledWith(expect.stringContaining('Updated 1 command'));
+    });
+
+    it('should upgrade Claude commands when installed', async () => {
+      vi.mocked(isClaudeAdapterInstalled).mockReturnValue(true);
+      vi.mocked(setupClaudeCommands).mockResolvedValue({
+        copied: ['dev-session.start.md'],
+        skipped: []
+      });
+
+      await upgrade();
+
+      expect(setupClaudeCommands).toHaveBeenCalledWith(
+        mockCwd,
+        join(mockPayloadPath, 'commands'),
+        true // skipPrompts
+      );
+      expect(p.log.success).toHaveBeenCalledWith(expect.stringContaining('Updated 1 command'));
+    });
+
+    it('should upgrade both Cursor and Claude commands when both installed', async () => {
+      vi.mocked(isCursorAdapterInstalled).mockReturnValue(true);
+      vi.mocked(isClaudeAdapterInstalled).mockReturnValue(true);
+      vi.mocked(setupCursorCommands).mockResolvedValue({ copied: ['test.md'], skipped: [] });
+      vi.mocked(setupClaudeCommands).mockResolvedValue({ copied: ['test.md'], skipped: [] });
+
+      await upgrade();
+
+      expect(setupCursorCommands).toHaveBeenCalled();
+      expect(setupClaudeCommands).toHaveBeenCalled();
     });
 
     it('should regenerate AGENTS.md when it exists', async () => {
@@ -323,12 +364,26 @@ describe('upgrade.ts', () => {
       vi.mocked(existsSync).mockImplementation((path) => {
         return String(path).includes('CLAUDE.md');
       });
-      
+
       await upgrade();
-      
+
       expect(writeFileSync).toHaveBeenCalledWith(
         join(mockCwd, 'CLAUDE.md'),
         expect.stringContaining('Flight Rules – Claude Code Adapter'),
+        'utf-8'
+      );
+    });
+
+    it('should regenerate CLAUDE.md with .claude/commands/ reference', async () => {
+      vi.mocked(existsSync).mockImplementation((path) => {
+        return String(path).includes('CLAUDE.md');
+      });
+
+      await upgrade();
+
+      expect(writeFileSync).toHaveBeenCalledWith(
+        join(mockCwd, 'CLAUDE.md'),
+        expect.stringContaining('.claude/commands/'),
         'utf-8'
       );
     });
@@ -338,17 +393,25 @@ describe('upgrade.ts', () => {
         const pathStr = String(path);
         return pathStr.includes('AGENTS.md') || pathStr.includes('CLAUDE.md');
       });
-      
+
       await upgrade();
-      
+
       expect(writeFileSync).toHaveBeenCalledTimes(2);
     });
 
     it('should cleanup and rethrow on adapter upgrade failure', async () => {
       vi.mocked(isCursorAdapterInstalled).mockReturnValue(true);
       vi.mocked(setupCursorCommands).mockRejectedValue(new Error('Command copy failed'));
-      
+
       await expect(upgrade()).rejects.toThrow('Command copy failed');
+      expect(mockCleanup).toHaveBeenCalled();
+    });
+
+    it('should cleanup and rethrow on Claude adapter upgrade failure', async () => {
+      vi.mocked(isClaudeAdapterInstalled).mockReturnValue(true);
+      vi.mocked(setupClaudeCommands).mockRejectedValue(new Error('Claude command copy failed'));
+
+      await expect(upgrade()).rejects.toThrow('Claude command copy failed');
       expect(mockCleanup).toHaveBeenCalled();
     });
   });

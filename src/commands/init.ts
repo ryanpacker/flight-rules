@@ -181,7 +181,7 @@ export async function init() {
         message: 'Which adapters would you like to generate?',
         options: [
           { value: 'cursor', label: 'Cursor (AGENTS.md + .cursor/commands/)', hint: 'recommended' },
-          { value: 'claude', label: 'Claude Code (CLAUDE.md)' },
+          { value: 'claude', label: 'Claude Code (CLAUDE.md + .claude/commands/)' },
         ],
         initialValues: ['cursor'],
       });

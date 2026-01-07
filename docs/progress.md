@@ -6,6 +6,14 @@ A running log of sessions and milestones.
 
 ## Session Logs
 
+### 2025-01-07 16:00
+
+- Added native slash command support for Claude Code adapter
+- Claude adapter now creates `.claude/commands/` with command files (like Cursor's `.cursor/commands/`)
+- `CLAUDE.md` now references `/dev-session.start` and `/dev-session.end` slash commands
+- Added 12 new tests (130 total, all passing)
+- See: [session_logs/20250107_1600_session.md](session_logs/20250107_1600_session.md)
+
 ### 2024-12-31 (evening)
 
 - Created `prd.create` command with dual-mode support (conversational + one-shot)
