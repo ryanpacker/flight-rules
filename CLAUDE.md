@@ -16,7 +16,6 @@ Agent guidelines and workflows live in `.flight-rules/`. Project documentation l
 | PRD | `docs/prd.md` |
 | Implementation Specs | `docs/implementation/` |
 | Progress Log | `docs/progress.md` |
-| Tech Stack | `docs/tech-stack.md` |
 | Session Commands | `.claude/commands/` (as slash commands) |
 
 ## For Agents

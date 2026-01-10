@@ -90,7 +90,7 @@ Once approved, create or update:
 
 ### Task Group Files
 
-For each task group, create `docs/implementation/{N}-{area}/{N}.{M}-topic.md`:
+For each task group, create `docs/implementation/{N}.{M}-topic.md`:
 
 ```markdown
 # {N}.{M} Task Group Name
@@ -144,8 +144,8 @@ Update `docs/implementation/{N}-{area}/index.md` to list the task groups:
 ```markdown
 ## Task Groups
 
-- **[1.1 User Registration](./1.1-user-registration.md)** – Account creation flow
-- **[1.2 Login/Logout](./1.2-login-logout.md)** – Session management
+- **[1.1 User Registration](../1.1-user-registration.md)** – Account creation flow
+- **[1.2 Login/Logout](../1.2-login-logout.md)** – Session management
 - ...
 ```
 
