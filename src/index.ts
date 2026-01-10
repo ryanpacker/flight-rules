@@ -5,6 +5,7 @@ import pc from 'picocolors';
 import { init } from './commands/init.js';
 import { upgrade } from './commands/upgrade.js';
 import { adapter } from './commands/adapter.js';
+import { getCliVersion } from './utils/files.js';
 
 const command = process.argv[2];
 const args = process.argv.slice(3);
@@ -26,6 +27,12 @@ function parseVersionArg(args: string[]): string | undefined {
 }
 
 async function main() {
+  // Handle --version early, without intro banner
+  if (command === '--version' || command === '-v') {
+    console.log(getCliVersion());
+    return;
+  }
+
   console.log();
   p.intro(pc.bgCyan(pc.black(' flight-rules ')));
 
@@ -44,10 +51,6 @@ async function main() {
     case '--help':
     case '-h':
       showHelp();
-      break;
-    case '--version':
-    case '-v':
-      console.log('flight-rules CLI');
       break;
     default:
       p.log.error(`Unknown command: ${command}`);
