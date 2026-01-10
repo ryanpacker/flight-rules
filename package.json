@@ -1,6 +1,6 @@
 {
   "name": "flight-rules",
-  "version": "0.5.7",
+  "version": "0.5.8",
   "description": "An opinionated framework for AI-assisted software development",
   "type": "module",
   "main": "dist/index.js",
