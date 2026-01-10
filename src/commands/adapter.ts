@@ -305,16 +305,17 @@ export async function adapter(args: string[]) {
 
 export async function generateAdapters(adapterNames: string[], sourceCommandsDir?: string, interactive = true) {
   const cwd = process.cwd();
-  
+
   // Default to .flight-rules/commands if no source specified
   const commandsDir = sourceCommandsDir ?? join(getFlightRulesDir(cwd), 'commands');
-  
+
   for (const name of adapterNames) {
     const config = ADAPTERS[name];
     if (!config) continue;
-    
+
     const filePath = join(cwd, config.filename);
-    
+    let adapterFileWritten = false;
+
     // Check if file already exists
     if (existsSync(filePath)) {
       if (interactive) {
@@ -322,30 +323,37 @@ export async function generateAdapters(adapterNames: string[], sourceCommandsDir
           message: `${config.filename} already exists. Overwrite?`,
           initialValue: false,
         });
-        
+
         if (p.isCancel(overwrite) || !overwrite) {
           p.log.info(`Skipped ${config.filename}`);
-          continue;
+          // Don't continue - still need to set up commands directory
+        } else {
+          const content = generateAdapterContent(config);
+          writeFileSync(filePath, content, 'utf-8');
+          p.log.success(`Updated ${pc.cyan(config.filename)} for ${config.name}`);
+          adapterFileWritten = true;
         }
       } else {
         // Non-interactive: skip overwrite (safe default)
         p.log.info(`Skipped ${config.filename} (already exists)`);
-        continue;
+        // Don't continue - still need to set up commands directory
       }
+    } else {
+      const content = generateAdapterContent(config);
+      writeFileSync(filePath, content, 'utf-8');
+      p.log.success(`Created ${pc.cyan(config.filename)} for ${config.name}`);
+      adapterFileWritten = true;
     }
-    
-    const content = generateAdapterContent(config);
-    writeFileSync(filePath, content, 'utf-8');
-    p.log.success(`Created ${pc.cyan(config.filename)} for ${config.name}`);
-    
+
     // For Cursor, also set up .cursor/commands/
     if (name === 'cursor') {
-      // In non-interactive mode, replace commands (update to latest)
       const skipPrompts = !interactive;
+      const commandsDirExists = isCursorAdapterInstalled(cwd);
       const result = await setupCursorCommands(cwd, commandsDir, skipPrompts);
 
       if (result.copied.length > 0) {
-        p.log.success(`Created ${pc.cyan('.cursor/commands/')} with ${result.copied.length} command(s)`);
+        const action = commandsDirExists ? 'Updated' : 'Created';
+        p.log.success(`${action} ${pc.cyan('.cursor/commands/')} with ${result.copied.length} command(s)`);
       }
       if (result.skipped.length > 0) {
         p.log.info(`Skipped ${result.skipped.length} existing command(s) in .cursor/commands/`);
@@ -354,12 +362,13 @@ export async function generateAdapters(adapterNames: string[], sourceCommandsDir
 
     // For Claude, also set up .claude/commands/
     if (name === 'claude') {
-      // In non-interactive mode, replace commands (update to latest)
       const skipPrompts = !interactive;
+      const commandsDirExists = isClaudeAdapterInstalled(cwd);
       const result = await setupClaudeCommands(cwd, commandsDir, skipPrompts);
 
       if (result.copied.length > 0) {
-        p.log.success(`Created ${pc.cyan('.claude/commands/')} with ${result.copied.length} command(s)`);
+        const action = commandsDirExists ? 'Updated' : 'Created';
+        p.log.success(`${action} ${pc.cyan('.claude/commands/')} with ${result.copied.length} command(s)`);
       }
       if (result.skipped.length > 0) {
         p.log.info(`Skipped ${result.skipped.length} existing command(s) in .claude/commands/`);

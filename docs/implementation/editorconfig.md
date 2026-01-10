@@ -67,3 +67,4 @@ After the adapter generation section, add:
 4. If user agrees: copy `payload/.editorconfig` to project root
 5. If non-interactive: skip silently
 
+

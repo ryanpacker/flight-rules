@@ -76,3 +76,4 @@ If yes, help prepare a commit message that:
 - References the session log file
 - Is concise but meaningful
 
+

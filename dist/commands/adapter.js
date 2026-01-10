@@ -247,6 +247,7 @@ export async function generateAdapters(adapterNames, sourceCommandsDir, interact
         if (!config)
             continue;
         const filePath = join(cwd, config.filename);
+        let adapterFileWritten = false;
         // Check if file already exists
         if (existsSync(filePath)) {
             if (interactive) {
@@ -256,25 +257,35 @@ export async function generateAdapters(adapterNames, sourceCommandsDir, interact
                 });
                 if (p.isCancel(overwrite) || !overwrite) {
                     p.log.info(`Skipped ${config.filename}`);
-                    continue;
+                    // Don't continue - still need to set up commands directory
+                }
+                else {
+                    const content = generateAdapterContent(config);
+                    writeFileSync(filePath, content, 'utf-8');
+                    p.log.success(`Updated ${pc.cyan(config.filename)} for ${config.name}`);
+                    adapterFileWritten = true;
                 }
             }
             else {
                 // Non-interactive: skip overwrite (safe default)
                 p.log.info(`Skipped ${config.filename} (already exists)`);
-                continue;
+                // Don't continue - still need to set up commands directory
             }
         }
-        const content = generateAdapterContent(config);
-        writeFileSync(filePath, content, 'utf-8');
-        p.log.success(`Created ${pc.cyan(config.filename)} for ${config.name}`);
+        else {
+            const content = generateAdapterContent(config);
+            writeFileSync(filePath, content, 'utf-8');
+            p.log.success(`Created ${pc.cyan(config.filename)} for ${config.name}`);
+            adapterFileWritten = true;
+        }
         // For Cursor, also set up .cursor/commands/
         if (name === 'cursor') {
-            // In non-interactive mode, replace commands (update to latest)
             const skipPrompts = !interactive;
+            const commandsDirExists = isCursorAdapterInstalled(cwd);
             const result = await setupCursorCommands(cwd, commandsDir, skipPrompts);
             if (result.copied.length > 0) {
-                p.log.success(`Created ${pc.cyan('.cursor/commands/')} with ${result.copied.length} command(s)`);
+                const action = commandsDirExists ? 'Updated' : 'Created';
+                p.log.success(`${action} ${pc.cyan('.cursor/commands/')} with ${result.copied.length} command(s)`);
             }
             if (result.skipped.length > 0) {
                 p.log.info(`Skipped ${result.skipped.length} existing command(s) in .cursor/commands/`);
@@ -282,11 +293,12 @@ export async function generateAdapters(adapterNames, sourceCommandsDir, interact
         }
         // For Claude, also set up .claude/commands/
         if (name === 'claude') {
-            // In non-interactive mode, replace commands (update to latest)
             const skipPrompts = !interactive;
+            const commandsDirExists = isClaudeAdapterInstalled(cwd);
             const result = await setupClaudeCommands(cwd, commandsDir, skipPrompts);
             if (result.copied.length > 0) {
-                p.log.success(`Created ${pc.cyan('.claude/commands/')} with ${result.copied.length} command(s)`);
+                const action = commandsDirExists ? 'Updated' : 'Created';
+                p.log.success(`${action} ${pc.cyan('.claude/commands/')} with ${result.copied.length} command(s)`);
             }
             if (result.skipped.length > 0) {
                 p.log.info(`Skipped ${result.skipped.length} existing command(s) in .claude/commands/`);

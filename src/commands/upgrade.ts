@@ -85,11 +85,14 @@ export async function upgrade(version?: string) {
   }
   if (claudeAdapterInstalled) {
     adaptersToUpgrade.push('Claude Code (.claude/commands/)');
+  } else if (claudeMdExists) {
+    // CLAUDE.md exists but .claude/commands/ doesn't - will be created on upgrade
+    adaptersToUpgrade.push('Claude Code (.claude/commands/ will be created)');
   }
   if (agentsMdExists) {
     adaptersToUpgrade.push('AGENTS.md');
   }
-  if (claudeMdExists) {
+  if (claudeMdExists && !adaptersToUpgrade.some(a => a.includes('Claude Code'))) {
     adaptersToUpgrade.push('CLAUDE.md');
   }
   
@@ -190,11 +193,13 @@ export async function upgrade(version?: string) {
         }
       }
 
-      // Upgrade Claude commands if installed
-      if (claudeAdapterInstalled) {
+      // Upgrade Claude commands if installed, or create them if CLAUDE.md exists but .claude/commands/ doesn't
+      // (handles upgrade from pre-0.5.4 where Claude didn't have native commands)
+      if (claudeAdapterInstalled || claudeMdExists) {
         const result = await setupClaudeCommands(cwd, sourceCommandsDir, true); // skipPrompts = true for upgrade
         if (result.copied.length > 0) {
-          p.log.success(`Updated ${result.copied.length} command(s) in .claude/commands/`);
+          const action = claudeAdapterInstalled ? 'Updated' : 'Created';
+          p.log.success(`${action} ${result.copied.length} command(s) in .claude/commands/`);
         }
       }
       
