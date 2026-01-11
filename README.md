@@ -1,5 +1,7 @@
 # Flight Rules
 
+> **Early Development**: This project is in active development (v0.x). APIs and conventions may change between versions. Install with the `dev` tag.
+
 An opinionated framework for AI-assisted software development. Provides conventions for docs, implementation specs, and coding session workflows that both humans and agents can navigate.
 
 The goal:  
@@ -18,7 +20,7 @@ Any agent (or person) should be able to open a project that uses Flight Rules an
 Install the CLI globally:
 
 ```bash
-npm install -g https://github.com/ryanpacker/flight-rules/tarball/main
+npm install -g flight-rules@dev
 ```
 
 Then initialize Flight Rules in any project:
@@ -31,7 +33,7 @@ flight-rules init
 Or run directly without installing:
 
 ```bash
-npx https://github.com/ryanpacker/flight-rules/tarball/main init
+npx flight-rules@dev init
 ```
 
 The `init` command will:
@@ -206,9 +208,9 @@ If you prefer not to use the CLI:
 
 - **Skills/MCP integration** — Conventions for documenting tools and workflows
 - **Hosted planning systems** — Potential integration with Linear, etc.
-- **npm registry publishing** — Simpler installation (targeting v0.2)
+- **v1.0 stability** — Stabilizing APIs and conventions for a production-ready release
 
-For now, the focus is:
+Current focus:
 
 - A solid, Markdown-based structure
 - Clear expectations for agents
@@ -260,6 +262,9 @@ Tests are located in `tests/` and mirror the `src/` structure:
 ```bash
 npm version patch   # or minor/major
 git push && git push --tags
+npm publish --tag dev
 ```
 
-This automatically builds, syncs the version to `payload/AGENTS.md`, and creates a tagged commit.
+This automatically builds, syncs the version to `payload/AGENTS.md`, creates a tagged commit, and publishes to npm.
+
+> **Note:** Until v1.0, all releases use the `dev` tag. Users install with `npm install -g flight-rules@dev`.

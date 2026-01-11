@@ -15,6 +15,9 @@
     "type": "git",
     "url": "git+https://github.com/ryanpacker/flight-rules.git"
   },
+  "publishConfig": {
+    "tag": "dev"
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
