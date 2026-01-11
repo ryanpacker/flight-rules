@@ -6,6 +6,14 @@ A running log of sessions and milestones.
 
 ## Session Logs
 
+### 2026-01-10 22:30
+
+- Published `flight-rules` v0.5.9 to npm registry
+- Package installable via `npm install -g flight-rules@dev`
+- Added early development banner to README
+- Updated installation docs from GitHub tarball to npm
+- See: [session_logs/20260110_2230_session.md](session_logs/20260110_2230_session.md)
+
 ### 2025-01-07 16:00
 
 - Added native slash command support for Claude Code adapter
