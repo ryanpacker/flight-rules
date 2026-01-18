@@ -68,6 +68,8 @@ The core problem: when an AI agent opens a project, it lacks context about what 
 
 12. **As a developer with a custom release process**, I want to define my release steps once in a readable format, so that any agent can execute the same workflow consistently.
 
+13. **As a developer refining implementation specs**, I want to clarify vague or incomplete task definitions so that the implementation guidance is specific enough to act on.
+
 ## Constraints
 
 1. **Careful handling of user-owned directories** — Flight Rules operates in directories the user also owns (`docs/`, `.cursor/commands/`, and optionally `.editorconfig`). The rules:

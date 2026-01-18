@@ -6,6 +6,13 @@ A running log of sessions and milestones.
 
 ## Session Logs
 
+### 2026-01-17 21:00
+
+- Added `impl.clarify` command for refining existing implementation specs
+- Updated `feature.add` to recommend both `impl.create` and `impl.clarify`
+- Added user story 13 to PRD
+- See: [session_logs/20260117_2100_session.md](session_logs/20260117_2100_session.md)
+
 ### 2026-01-17 20:46
 
 - Added `version.bump` and `project.release` features to PRD (Goals 7-8)

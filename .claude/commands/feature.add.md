@@ -300,7 +300,8 @@ After applying changes:
 > - Defined [X] initial tasks (all 🔵 Planned)
 >
 > **Next Steps:**
-> - Run `/impl.create [area]` to add more detail to the tasks
+> - Run `/impl.create [area]` to add new task groups or tasks
+> - Run `/impl.clarify [area]` to refine existing task definitions
 > - Run `/dev-session.start` to begin implementing this feature
 > - Run `/feature.add` to add another feature
 
