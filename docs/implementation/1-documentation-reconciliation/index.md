@@ -22,3 +22,7 @@ Commands for bringing documentation back into sync with project reality when wor
 - **[1.2 PRD Reconcile](./1.2-prd-reconcile.md)** — `prd.reconcile` command
 - **[1.3 Impl Reconcile](./1.3-impl-reconcile.md)** — `impl.reconcile` command
 - **[1.4 Docs Reconcile](./1.4-docs-reconcile.md)** — `docs.reconcile` orchestration and cross-check
+
+## Status
+
+All command files created. Commands are functional prompt-based workflows executed by AI agents.

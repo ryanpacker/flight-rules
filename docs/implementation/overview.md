@@ -5,8 +5,23 @@ This document lists the major implementation areas for this project.
 ## Implementation Areas
 
 1. **Documentation Reconciliation** — Commands for syncing documentation with project reality
-   - Status: 🟡 In Progress
+   - Status: ✅ Complete
    - See: `1-documentation-reconciliation/`
+
+2. **CLI Core** — The Flight Rules command-line interface
+   - Status: ✅ Complete
+   - See: `2-cli-core/`
+
+3. **Workflow Commands** — Prompt-based commands for AI agents
+   - Status: ✅ Complete
+   - See: `3-workflow-commands/`
+
+## Historical Specs
+
+These documents capture design decisions for specific features:
+
+- [editorconfig.md](./editorconfig.md) — EditorConfig installation feature
+- [manifest-versioning.md](./manifest-versioning.md) — Manifest.json versioning system
 
 ## How to Use This
 

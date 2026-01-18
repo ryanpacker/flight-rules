@@ -89,6 +89,28 @@ Two core flows:
 
 Agents don't start these flows on their own; you explicitly invoke them.
 
+### Available Commands
+
+Flight Rules provides workflow commands that agents can execute:
+
+| Command | Purpose |
+|---------|---------|
+| `/dev-session.start` | Begin a structured coding session with goals and plan |
+| `/dev-session.end` | End session, summarize work, update progress |
+| `/prd.create` | Create a Product Requirements Document |
+| `/prd.clarify` | Refine specific sections of an existing PRD |
+| `/impl.outline` | Create implementation area structure |
+| `/impl.create` | Add detailed tasks to implementation specs |
+| `/feature.add` | Add a new feature to PRD and implementation docs |
+| `/test.add` | Add tests for specific functionality |
+| `/test.assess-current` | Analyze existing test coverage |
+| `/prompt.refine` | Iteratively improve a prompt |
+| `/readme.create` | Generate README from PRD and project state |
+| `/readme.reconcile` | Update README to reflect recent changes |
+| `/prd.reconcile` | Update PRD based on what was actually built |
+| `/impl.reconcile` | Update implementation docs with status changes |
+| `/docs.reconcile` | Run all reconcile commands + consistency check |
+
 ### Versioning
 
 Each project tracks which Flight Rules version it uses:
@@ -126,11 +148,22 @@ your-project/
     │   ├── session-log.md
     │   └── implementation/
     │       └── overview.md
-    ├── commands/
+    ├── commands/             # Workflow commands
     │   ├── dev-session.start.md
     │   ├── dev-session.end.md
+    │   ├── prd.create.md
+    │   ├── prd.clarify.md
+    │   ├── impl.outline.md
+    │   ├── impl.create.md
+    │   ├── feature.add.md
     │   ├── test.add.md
-    │   └── test.assess-current.md
+    │   ├── test.assess-current.md
+    │   ├── prompt.refine.md
+    │   ├── readme.create.md
+    │   ├── readme.reconcile.md
+    │   ├── prd.reconcile.md
+    │   ├── impl.reconcile.md
+    │   └── docs.reconcile.md
     └── prompts/              # Reusable prompt templates
 ```
 

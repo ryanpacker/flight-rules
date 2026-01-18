@@ -60,7 +60,7 @@ The core problem: when an AI agent opens a project, it lacks context about what 
    - **Updating existing files:** Rare and requires care. Ideally, detect whether a file has been user-modified vs. left as a template. If unmodified, safe to update; if modified, notify rather than overwrite.
    - **Over-communicate:** Any changes to user-owned directories should be explicit and transparent
 
-2. **CLI distribution via GitHub (for now)** — Until npm registry publishing (v0.2), installation happens via GitHub tarball. This affects how users install and upgrade.
+2. **CLI distribution via npm** — The package is published to npm with a `dev` tag during pre-1.0 development. Users install with `npm install -g flight-rules@dev`.
 
 3. **Non-interactive mode** — When stdout is not a TTY (CI environments, piped output, agent invocation), CLI commands use safe defaults: skip destructive actions (no reinstall, no overwrite), proceed with non-destructive ones (create new docs, perform upgrades).
 
