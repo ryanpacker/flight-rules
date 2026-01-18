@@ -99,7 +99,7 @@ Review each commit message and categorize:
 
 **Breaking Changes (→ major bump):**
 - Contains "BREAKING CHANGE" or "BREAKING:"
-- Commit type with `!` suffix (e.g., "feat!:", "fix!:")
+- Commit type with exclamation suffix (e.g., "feat!:", "fix!:")
 - Messages indicating removed features, changed APIs, or incompatible changes
 - Words like "remove", "delete", "rename" for public APIs
 
