@@ -16,6 +16,12 @@ This document lists the major implementation areas for this project.
    - Status: ✅ Complete
    - See: `3-workflow-commands/`
 
+4. **Ralph Loop Integration** — Autonomous iteration with verification
+   - Status: 🔵 Planned
+   - See: `4-ralph-loop/`
+   - Enables autonomous multi-session execution with pass/fail verification
+   - Phases: Session Continuation → Task Verification → Story Tracking
+
 ## Historical Specs
 
 These documents capture design decisions for specific features:
