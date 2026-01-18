@@ -4,17 +4,9 @@ This document lists the major implementation areas for this project.
 
 ## Implementation Areas
 
-<!-- 
-Add implementation areas as you define them:
-
-1. **Area Name** – Brief description
-   - Status: 🔵 Planned / 🟡 In Progress / ✅ Complete
-   - See: `1-area-name/`
-
-2. **Another Area** – Brief description
-   - Status: 🔵 Planned
-   - See: `2-another-area/`
--->
+1. **Documentation Reconciliation** — Commands for syncing documentation with project reality
+   - Status: 🟡 In Progress
+   - See: `1-documentation-reconciliation/`
 
 ## How to Use This
 

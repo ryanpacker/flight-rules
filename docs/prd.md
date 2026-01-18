@@ -20,6 +20,9 @@ The core problem: when an AI agent opens a project, it lacks context about what 
 4. **Preserve context across time and agents** — Session logs, progress tracking, and learnings persist so that any agent, person, or future-you can pick up where things left off.
    - *Measured by:* An agent can resume work after a gap without the user re-explaining context
 
+5. **Documentation reconciliation** — When work happens outside the standard workflow, provide commands to bring documentation back into sync with reality. Also detect when docs have drifted out of sync with each other.
+   - *Measured by:* Running `/docs.reconcile` identifies and resolves documentation drift
+
 ## Non-Goals
 
 1. **Not a project management tool** — Flight Rules doesn't replace Linear, Jira, or GitHub Issues. It's documentation conventions, not a hosted system.
@@ -45,6 +48,10 @@ The core problem: when an AI agent opens a project, it lacks context about what 
 6. **As an AI agent or CI system**, I want Flight Rules CLI to work without interactive prompts so that I can automate installations and upgrades.
 
 7. **As a developer using AI coding tools**, I want consistent editor settings so that formatting differences (like trailing newlines) don't create phantom uncommitted changes after commits.
+
+8. **As a developer who did work without following the full workflow**, I want to quickly update my documentation to reflect what was actually built, so that my project stays well-documented even when I take shortcuts.
+
+9. **As a developer maintaining a project over time**, I want to detect when my README, PRD, and implementation docs have drifted out of sync, so that I can fix inconsistencies before they cause confusion.
 
 ## Constraints
 
@@ -92,3 +99,4 @@ The `manifest.json` file records:
 | Agent portability | Adapters exist for multiple tools; switching requires no additional configuration |
 | Requirements → Tasks | Projects have a clear path from PRD → implementation specs → tracked tasks |
 | Preserve context | Agents can resume work after gaps without user re-explanation |
+| Documentation reconciliation | `/docs.reconcile` detects drift and proposes fixes; cross-check identifies inconsistencies |
