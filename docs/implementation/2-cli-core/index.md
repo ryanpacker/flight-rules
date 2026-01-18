@@ -22,7 +22,8 @@ The Flight Rules command-line interface, distributed via npm.
 - **[2.2 Upgrade Command](./2.2-upgrade-command.md)** — Upgrade Flight Rules in existing projects
 - **[2.3 Adapter Command](./2.3-adapter-command.md)** — Generate agent-specific adapters
 - **[2.4 Utility Functions](./2.4-utility-functions.md)** — Shared utilities for file operations and prompts
+- **[2.5 Update Command](./2.5-update-command.md)** — Check for and install CLI updates
 
 ## Status
 
-✅ Complete — All CLI commands are implemented and tested.
+✅ Complete — All CLI commands implemented and tested.

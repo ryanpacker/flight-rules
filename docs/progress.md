@@ -6,6 +6,16 @@ A running log of sessions and milestones.
 
 ## Session Logs
 
+### 2026-01-17
+
+- Implemented update command feature (Task Group 2.5)
+- Created user-level config at `~/.flight-rules/config.json`
+- Added version check with 24-hour caching against npm registry
+- Added passive update notification after CLI commands
+- Created `flight-rules update` command with `--channel` flag
+- Added 40 new tests (170 total, all passing)
+- See: [session_logs/20260117_session.md](session_logs/20260117_session.md)
+
 ### 2026-01-10 22:30
 
 - Published `flight-rules` v0.5.9 to npm registry

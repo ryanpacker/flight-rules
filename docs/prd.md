@@ -23,6 +23,9 @@ The core problem: when an AI agent opens a project, it lacks context about what 
 5. **Documentation reconciliation** — When work happens outside the standard workflow, provide commands to bring documentation back into sync with reality. Also detect when docs have drifted out of sync with each other.
    - *Measured by:* Running `/docs.reconcile` identifies and resolves documentation drift
 
+6. **Easy updates** — Users are notified when a newer CLI version is available and can update with a single command. The update mechanism respects the user's chosen release channel (dev vs latest).
+   - *Measured by:* Users running outdated versions see a notification; `flight-rules update` performs the upgrade within their channel
+
 ## Non-Goals
 
 1. **Not a project management tool** — Flight Rules doesn't replace Linear, Jira, or GitHub Issues. It's documentation conventions, not a hosted system.
@@ -52,6 +55,8 @@ The core problem: when an AI agent opens a project, it lacks context about what 
 8. **As a developer who did work without following the full workflow**, I want to quickly update my documentation to reflect what was actually built, so that my project stays well-documented even when I take shortcuts.
 
 9. **As a developer maintaining a project over time**, I want to detect when my README, PRD, and implementation docs have drifted out of sync, so that I can fix inconsistencies before they cause confusion.
+
+10. **As a developer using Flight Rules**, I want to know when a newer version is available so that I can stay current with improvements and fixes without accidentally switching release channels.
 
 ## Constraints
 
@@ -100,3 +105,4 @@ The `manifest.json` file records:
 | Requirements → Tasks | Projects have a clear path from PRD → implementation specs → tracked tasks |
 | Preserve context | Agents can resume work after gaps without user re-explanation |
 | Documentation reconciliation | `/docs.reconcile` detects drift and proposes fixes; cross-check identifies inconsistencies |
+| Easy updates | Daily version check notifies users of updates; `flight-rules update` upgrades within the user's release channel |
