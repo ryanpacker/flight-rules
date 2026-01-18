@@ -24,10 +24,11 @@ Prompt-based commands that AI agents execute to follow Flight Rules workflows.
 - **[3.4 Testing Commands](./3.4-testing-commands.md)** — Add tests and assess test coverage
 - **[3.5 Feature Command](./3.5-feature-command.md)** — Add features to existing projects
 - **[3.6 Prompt Command](./3.6-prompt-command.md)** — Refine and improve prompts
+- **[3.7 Release Commands](./3.7-release-commands.md)** — Version bumping and release workflows
 
 ## Status
 
-✅ Complete — All workflow commands are implemented.
+🟡 In Progress — Core workflow commands (3.1-3.6) are complete. Release commands (3.7) are planned.
 
 ## Note
 

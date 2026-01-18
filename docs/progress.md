@@ -6,6 +6,14 @@ A running log of sessions and milestones.
 
 ## Session Logs
 
+### 2026-01-17 20:46
+
+- Added `version.bump` and `project.release` features to PRD (Goals 7-8)
+- Created implementation spec `3.7-release-commands.md`
+- Implemented `version.bump` command (Task 3.7.1)
+- Command supports one-shot mode (`version.bump patch`) and conversational mode (analyze commits, recommend bump)
+- See: [session_logs/20260117_2046_session.md](session_logs/20260117_2046_session.md)
+
 ### 2026-01-17
 
 - Implemented update command feature (Task Group 2.5)

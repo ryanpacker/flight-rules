@@ -26,6 +26,12 @@ The core problem: when an AI agent opens a project, it lacks context about what 
 6. **Easy updates** — Users are notified when a newer CLI version is available and can update with a single command. The update mechanism respects the user's chosen release channel (dev vs latest).
    - *Measured by:* Users running outdated versions see a notification; `flight-rules update` performs the upgrade within their channel
 
+7. **Intelligent version management** — Analyze changes since the last release and recommend appropriate version bumps following semantic versioning conventions.
+   - *Measured by:* Running `/version.bump` produces an accurate recommendation based on commit analysis
+
+8. **Project-specific release workflows** — Define and execute release processes tailored to each project's needs, stored as human-readable documentation.
+   - *Measured by:* Running `/project.release` follows the steps defined in `docs/release.md`
+
 ## Non-Goals
 
 1. **Not a project management tool** — Flight Rules doesn't replace Linear, Jira, or GitHub Issues. It's documentation conventions, not a hosted system.
@@ -57,6 +63,10 @@ The core problem: when an AI agent opens a project, it lacks context about what 
 9. **As a developer maintaining a project over time**, I want to detect when my README, PRD, and implementation docs have drifted out of sync, so that I can fix inconsistencies before they cause confusion.
 
 10. **As a developer using Flight Rules**, I want to know when a newer version is available so that I can stay current with improvements and fixes without accidentally switching release channels.
+
+11. **As a developer preparing a release**, I want the agent to analyze my recent commits and recommend whether this should be a major, minor, or patch version bump, so that I follow semantic versioning correctly.
+
+12. **As a developer with a custom release process**, I want to define my release steps once in a readable format, so that any agent can execute the same workflow consistently.
 
 ## Constraints
 
@@ -106,3 +116,5 @@ The `manifest.json` file records:
 | Preserve context | Agents can resume work after gaps without user re-explanation |
 | Documentation reconciliation | `/docs.reconcile` detects drift and proposes fixes; cross-check identifies inconsistencies |
 | Easy updates | Daily version check notifies users of updates; `flight-rules update` upgrades within the user's release channel |
+| Intelligent version management | `/version.bump` analyzes commits and recommends correct semver bump |
+| Project-specific release workflows | `/project.release` reads `docs/release.md` and executes defined steps |
