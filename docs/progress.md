@@ -6,6 +6,12 @@ A running log of sessions and milestones.
 
 ## Session Logs
 
+### 2026-01-23
+
+- Added `agents-md.refine` command for refactoring AGENTS.md using progressive disclosure
+- Command guides through: finding contradictions, extracting essentials, grouping into category files, flagging deletions
+- See: [session_logs/20260123_session.md](session_logs/20260123_session.md)
+
 ### 2026-01-17 21:00
 
 - Added `impl.clarify` command for refining existing implementation specs
