@@ -116,13 +116,19 @@ async function runClaudeWithPrompt(promptContent, verbose) {
         });
         let output = '';
         let errorOutput = '';
+        let lineBuffer = ''; // Buffer for incomplete JSON lines
         claude.stdout?.on('data', (data) => {
             const text = data.toString();
             output += text;
             if (verbose) {
-                // Parse stream-json format and extract text content
-                const lines = text.split('\n').filter((line) => line.trim());
+                // Prepend any buffered partial line from previous chunk
+                const fullText = lineBuffer + text;
+                const lines = fullText.split('\n');
+                // Last element might be incomplete - save it for next chunk
+                lineBuffer = lines.pop() || '';
                 for (const line of lines) {
+                    if (!line.trim())
+                        continue;
                     try {
                         const parsed = JSON.parse(line);
                         // Handle different message types in stream-json format
@@ -142,7 +148,7 @@ async function runClaudeWithPrompt(promptContent, verbose) {
                         }
                     }
                     catch {
-                        // Not valid JSON or incomplete line, skip
+                        // Not valid JSON, skip
                     }
                 }
             }
