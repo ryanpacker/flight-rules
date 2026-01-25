@@ -197,6 +197,81 @@ your-project/
 | `flight-rules init` | Install Flight Rules into a project (interactive setup wizard) |
 | `flight-rules upgrade` | Upgrade Flight Rules in an existing project (preserves your docs) |
 | `flight-rules adapter` | Generate agent-specific adapters (`--cursor`, `--claude`) |
+| `flight-rules ralph` | Run autonomous agent loop through task groups |
+
+---
+
+## Autonomous Development with Ralph
+
+Flight Rules includes support for "Ralph Loops" — autonomous AI agent loops that work through your implementation specs unattended.
+
+### How It Works
+
+Ralph spawns fresh Claude Code instances in a loop. Each iteration:
+
+1. Reads your implementation specs
+2. Finds the next incomplete task group
+3. Implements all tasks in that group
+4. Runs quality checks (reads `package.json` to discover available scripts)
+5. Commits the work
+6. Exits (triggering the next fresh iteration with a clean context)
+
+The loop terminates when all task groups are complete or max iterations is reached.
+
+Memory persists between iterations via:
+- Git history (commits from previous iterations)
+- `docs/progress.md` (work log)
+- `docs/ralph_logs/` (verbose session logs)
+- `docs/critical-learnings.md` (patterns and gotchas)
+- The implementation spec files themselves (status updates)
+
+### Running Ralph
+
+```bash
+# Start the loop (default 10 iterations)
+flight-rules ralph
+
+# Run with more iterations
+flight-rules ralph --max-iterations 20
+flight-rules ralph -n 20
+
+# Focus on a specific implementation area
+flight-rules ralph --area 2
+flight-rules ralph --area 2-cli-core
+
+# Create a new branch before starting (recommended)
+flight-rules ralph --branch                    # Auto-generates: ralph/YYYYMMDD-HHMM
+flight-rules ralph --branch feature/my-work    # Custom branch name
+
+# Combine options for a typical workflow
+flight-rules ralph --area 2 --branch -n 20
+
+# See what would run without executing
+flight-rules ralph --dry-run
+
+# See full Claude output during execution
+flight-rules ralph --verbose
+```
+
+### Prerequisites
+
+- Claude Code CLI installed: `npm install -g @anthropic-ai/claude-code`
+- Authenticated with Claude Code: run `claude` and follow prompts
+- Implementation specs with task groups to work through
+
+### Best Practices
+
+1. **Use `--branch`**: Always create a new branch before starting a Ralph loop for easy rollback and PR workflow
+2. **Target specific areas**: Use `--area` to focus Ralph on one implementation area at a time
+3. **Small task groups**: Each task group should be completable within one context window
+4. **Clear acceptance criteria**: Ralph works best with specific, verifiable criteria
+5. **Quality checks configured**: Ensure `npm test`, `npm run lint`, etc. are set up in `package.json`
+6. **Review the work**: Ralph commits frequently — review with `git log` and create a PR for code review
+7. **Container usage**: For maximum safety, run in a Docker container without network access
+
+### Security Note
+
+Ralph uses `--dangerously-skip-permissions` to run Claude autonomously. This flag bypasses all permission prompts. Use with caution and preferably in isolated environments.
 
 ---
 

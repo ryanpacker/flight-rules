@@ -6,6 +6,16 @@ A running log of sessions and milestones.
 
 ## Session Logs
 
+### 2026-01-24
+
+- Added `flight-rules ralph` command for autonomous agent loops
+- Ralph spawns fresh Claude Code instances to work through task groups unattended
+- Created `ralph-loop.md` prompt with quality check discovery and verbose logging
+- Added `--area` flag to target specific implementation areas
+- Added `--branch` flag to create new git branch before starting (with auto-generation)
+- Added 16 new tests (186 total, all passing)
+- See: [session_logs/20260124_session.md](session_logs/20260124_session.md)
+
 ### 2026-01-23
 
 - Added `agents-md.refine` command for refactoring AGENTS.md using progressive disclosure

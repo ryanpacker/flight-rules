@@ -5,6 +5,7 @@ import { init } from './commands/init.js';
 import { upgrade } from './commands/upgrade.js';
 import { adapter } from './commands/adapter.js';
 import { update } from './commands/update.js';
+import { ralph } from './commands/ralph.js';
 import { getCliVersion } from './utils/files.js';
 import { checkForUpdate, shouldSkipUpdateCheck } from './utils/version-check.js';
 import { isInteractive } from './utils/interactive.js';
@@ -22,6 +23,70 @@ function parseVersionArg(args) {
     const versionArg = args.find(arg => arg.startsWith('--version='));
     if (versionArg) {
         return versionArg.split('=')[1];
+    }
+    return undefined;
+}
+/**
+ * Parse an integer argument from args
+ */
+function parseIntArg(args, longFlag, shortFlag, defaultValue) {
+    // Check for --flag value format
+    const longIndex = args.findIndex(arg => arg === longFlag);
+    if (longIndex !== -1 && args[longIndex + 1]) {
+        const parsed = parseInt(args[longIndex + 1], 10);
+        if (!isNaN(parsed))
+            return parsed;
+    }
+    // Check for -n value format
+    const shortIndex = args.findIndex(arg => arg === shortFlag);
+    if (shortIndex !== -1 && args[shortIndex + 1]) {
+        const parsed = parseInt(args[shortIndex + 1], 10);
+        if (!isNaN(parsed))
+            return parsed;
+    }
+    // Check for --flag=value format
+    const equalsArg = args.find(arg => arg.startsWith(`${longFlag}=`));
+    if (equalsArg) {
+        const parsed = parseInt(equalsArg.split('=')[1], 10);
+        if (!isNaN(parsed))
+            return parsed;
+    }
+    return defaultValue;
+}
+/**
+ * Parse a string argument from args
+ */
+function parseStringArg(args, longFlag) {
+    // Check for --flag value format
+    const longIndex = args.findIndex(arg => arg === longFlag);
+    if (longIndex !== -1 && args[longIndex + 1] && !args[longIndex + 1].startsWith('-')) {
+        return args[longIndex + 1];
+    }
+    // Check for --flag=value format
+    const equalsArg = args.find(arg => arg.startsWith(`${longFlag}=`));
+    if (equalsArg) {
+        return equalsArg.split('=')[1];
+    }
+    return undefined;
+}
+/**
+ * Parse --branch flag which can be a boolean (just --branch) or have a value (--branch name)
+ */
+function parseBranchArg(args) {
+    // Check for --branch=value format
+    const equalsArg = args.find(arg => arg.startsWith('--branch='));
+    if (equalsArg) {
+        return equalsArg.split('=')[1];
+    }
+    // Check for --branch value format (value must not start with -)
+    const branchIndex = args.findIndex(arg => arg === '--branch');
+    if (branchIndex !== -1) {
+        const nextArg = args[branchIndex + 1];
+        if (nextArg && !nextArg.startsWith('-')) {
+            return nextArg;
+        }
+        // --branch without a value means auto-generate
+        return true;
     }
     return undefined;
 }
@@ -47,6 +112,15 @@ async function main() {
         case 'update':
             await update(args);
             break;
+        case 'ralph':
+            await ralph({
+                maxIterations: parseIntArg(args, '--max-iterations', '-n', 10),
+                dryRun: args.includes('--dry-run'),
+                verbose: args.includes('--verbose'),
+                area: parseStringArg(args, '--area'),
+                branch: parseBranchArg(args),
+            });
+            break;
         case undefined:
         case '--help':
         case '-h':
@@ -69,6 +143,7 @@ ${pc.bold('Commands:')}
   upgrade     Upgrade Flight Rules (preserves your docs)
   adapter     Generate agent-specific adapter files
   update      Update the Flight Rules CLI itself
+  ralph       Run autonomous agent loop through task groups
 
 ${pc.bold('Upgrade Options:')}
   --version <version>   Upgrade to a specific version (e.g., 0.1.4)
@@ -83,6 +158,13 @@ ${pc.bold('Adapter Options:')}
   --claude    Generate CLAUDE.md for Claude Code
   --all       Generate all adapters
 
+${pc.bold('Ralph Options:')}
+  --max-iterations, -n <n>  Maximum iterations before stopping (default: 10)
+  --area <id>               Focus on a specific implementation area (e.g., 2 or 2-cli-core)
+  --branch [name]           Create a new branch before starting (auto-generates if no name)
+  --dry-run                 Show what would be executed without running
+  --verbose                 Show full Claude output during execution
+
 ${pc.bold('Examples:')}
   flight-rules init
   flight-rules upgrade
@@ -90,6 +172,11 @@ ${pc.bold('Examples:')}
   flight-rules update
   flight-rules update --channel=latest
   flight-rules adapter --cursor --claude
+  flight-rules ralph
+  flight-rules ralph --max-iterations 20
+  flight-rules ralph --area 2 --branch
+  flight-rules ralph --area 2-cli-core --branch feature/cli-work
+  flight-rules ralph --dry-run
 `);
 }
 /**
@@ -102,8 +189,8 @@ async function showUpdateNotification() {
     if (!isInteractive() || shouldSkipUpdateCheck()) {
         return;
     }
-    // Skip for commands that handle their own version checking
-    if (command === 'update' || command === '--version' || command === '-v') {
+    // Skip for commands that handle their own version checking or run autonomously
+    if (command === 'update' || command === 'ralph' || command === '--version' || command === '-v') {
         return;
     }
     try {
