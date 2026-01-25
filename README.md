@@ -197,6 +197,7 @@ your-project/
 | `flight-rules init` | Install Flight Rules into a project (interactive setup wizard) |
 | `flight-rules upgrade` | Upgrade Flight Rules in an existing project (preserves your docs) |
 | `flight-rules adapter` | Generate agent-specific adapters (`--cursor`, `--claude`) |
+| `flight-rules update` | Update the Flight Rules CLI itself (`--channel` to switch dev/latest) |
 | `flight-rules ralph` | Run autonomous agent loop through task groups |
 
 ---
