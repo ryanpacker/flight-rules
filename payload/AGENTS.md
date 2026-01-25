@@ -1,6 +1,6 @@
 # Flight Rules – Agent Guidelines
 
-flight_rules_version: 0.13.4
+flight_rules_version: 0.13.5
 
 This file defines how agents (Claude Code, Cursor, etc.) should work on software projects using the Flight Rules system.
 
