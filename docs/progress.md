@@ -6,6 +6,12 @@ A running log of sessions and milestones.
 
 ## Session Logs
 
+### 2026-01-25
+
+- Added "Spec Evolution (No Version History)" guidelines to AGENTS.md
+- Clarifies that implementation specs describe current state, not version history
+- Directs change history to Git commits, session logs, and progress.md
+
 ### 2026-01-24
 
 - Added `flight-rules ralph` command for autonomous agent loops
