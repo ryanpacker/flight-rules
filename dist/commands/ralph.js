@@ -136,6 +136,10 @@ async function runClaudeWithPrompt(promptContent, verbose) {
                         else if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
                             process.stdout.write(parsed.delta.text);
                         }
+                        else if (parsed.type === 'content_block_stop') {
+                            // Add newline after each content block ends
+                            process.stdout.write('\n');
+                        }
                     }
                     catch {
                         // Not valid JSON or incomplete line, skip
