@@ -103,9 +103,14 @@ async function isClaudeCliAvailable() {
  */
 async function runClaudeWithPrompt(promptContent, verbose) {
     return new Promise((resolve, reject) => {
-        const claude = spawn('claude', ['--dangerously-skip-permissions', '-p'], {
+        // Use --output-format stream-json for real-time streaming output
+        const claude = spawn('claude', [
+            '--dangerously-skip-permissions',
+            '-p',
+            '--output-format',
+            'stream-json',
+        ], {
             stdio: ['pipe', 'pipe', 'pipe'],
-            shell: true,
         });
         let output = '';
         let errorOutput = '';
@@ -113,7 +118,27 @@ async function runClaudeWithPrompt(promptContent, verbose) {
             const text = data.toString();
             output += text;
             if (verbose) {
-                process.stdout.write(text);
+                // Parse stream-json format and extract text content
+                const lines = text.split('\n').filter((line) => line.trim());
+                for (const line of lines) {
+                    try {
+                        const parsed = JSON.parse(line);
+                        // Handle different message types in stream-json format
+                        if (parsed.type === 'assistant' && parsed.message?.content) {
+                            for (const block of parsed.message.content) {
+                                if (block.type === 'text' && block.text) {
+                                    process.stdout.write(block.text);
+                                }
+                            }
+                        }
+                        else if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
+                            process.stdout.write(parsed.delta.text);
+                        }
+                    }
+                    catch {
+                        // Not valid JSON or incomplete line, skip
+                    }
+                }
             }
         });
         claude.stderr?.on('data', (data) => {
