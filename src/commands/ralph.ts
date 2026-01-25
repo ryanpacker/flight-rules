@@ -132,9 +132,11 @@ async function runClaudeWithPrompt(
 ): Promise<{ output: string; exitCode: number }> {
   return new Promise((resolve, reject) => {
     // Use --output-format stream-json for real-time streaming output
+    // Note: Claude CLI requires --verbose when using stream-json with -p
     const claude = spawn('claude', [
       '--dangerously-skip-permissions',
       '-p',
+      '--verbose',
       '--output-format',
       'stream-json',
     ], {
