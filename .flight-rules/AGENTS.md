@@ -1,6 +1,6 @@
 # Flight Rules – Agent Guidelines
 
-flight_rules_version: 0.10.0
+flight_rules_version: 0.13.6
 
 This file defines how agents (Claude Code, Cursor, etc.) should work on software projects using the Flight Rules system.
 
@@ -133,6 +133,35 @@ When working on code:
      - What was actually done
      - Any deviations from original plan
      - Updated `Status:` values
+
+### Spec Evolution (No Version History)
+
+  Implementation specs describe **the current intended state** of the system. They are not changelogs.
+
+  **When requirements change:**
+  - Update specs to reflect the new reality. Delete descriptions of old approaches.
+  - Do NOT add "v2" sections alongside "v1" descriptions
+  - Do NOT create separate documents for new versions (e.g., `design-decisions-v2.md`)
+  - Do NOT maintain comparison tables showing "what was vs what is now"
+
+  **Where history belongs:**
+  - Git commits and diffs preserve what changed
+  - Session logs in `docs/session_logs/` capture decision context and rationale
+  - `docs/progress.md` tracks milestones chronologically
+
+  **Think of specs like source code**: When you refactor a function, you don't leave the old implementation
+  commented out with notes explaining how it used to work. You update it and trust Git to preserve history.
+
+  **Example of what NOT to do:**
+  - "v2 Requirements" as a separate document
+  - "Key Changes from v1" tables
+  - Task titles like "2.1.1. Plans Table (v2)"
+  - "Migration Notes" sections explaining what's being deleted
+
+  **Example of what TO do:**
+  - Single authoritative document describing current design
+  - Update existing task groups when approach changes
+  - Delete obsolete task groups entirely
 
 ---
 
