@@ -8,6 +8,12 @@ A running log of sessions and milestones.
 
 ### 2026-01-25
 
+- Added `impl.validate` command for auditing completed tasks against specs
+- Command verifies code matches implementation specs (opposite direction of impl.reconcile)
+- Creates discrepancy files and updates task status when issues found
+- Added PRD Goal 9 (Implementation verification) and User Story 14
+
+Earlier:
 - Added "Spec Evolution (No Version History)" guidelines to AGENTS.md
 - Clarifies that implementation specs describe current state, not version history
 - Directs change history to Git commits, session logs, and progress.md

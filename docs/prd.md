@@ -32,6 +32,9 @@ The core problem: when an AI agent opens a project, it lacks context about what 
 8. **Project-specific release workflows** — Define and execute release processes tailored to each project's needs, stored as human-readable documentation.
    - *Measured by:* Running `/project.release` follows the steps defined in `docs/release.md`
 
+9. **Implementation verification** — Audit completed tasks to verify that code actually matches what implementation specs claim, catching over-claimed completion, drift, and mismatched implementations.
+   - *Measured by:* Running `/impl.validate` identifies discrepancies between specs and code
+
 ## Non-Goals
 
 1. **Not a project management tool** — Flight Rules doesn't replace Linear, Jira, or GitHub Issues. It's documentation conventions, not a hosted system.
@@ -69,6 +72,8 @@ The core problem: when an AI agent opens a project, it lacks context about what 
 12. **As a developer with a custom release process**, I want to define my release steps once in a readable format, so that any agent can execute the same workflow consistently.
 
 13. **As a developer refining implementation specs**, I want to clarify vague or incomplete task definitions so that the implementation guidance is specific enough to act on.
+
+14. **As a developer preparing for release**, I want to verify that all tasks marked complete actually meet their acceptance criteria, so that I can catch over-claimed or drifted implementations before shipping.
 
 ## Constraints
 
@@ -120,3 +125,4 @@ The `manifest.json` file records:
 | Easy updates | Daily version check notifies users of updates; `flight-rules update` upgrades within the user's release channel |
 | Intelligent version management | `/version.bump` analyzes commits and recommends correct semver bump |
 | Project-specific release workflows | `/project.release` reads `docs/release.md` and executes defined steps |
+| Implementation verification | `/impl.validate` audits completed tasks and reports discrepancies with specific evidence |
