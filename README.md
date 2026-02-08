@@ -110,6 +110,8 @@ Flight Rules provides workflow commands that agents can execute:
 | `/prd.reconcile` | Update PRD based on what was actually built |
 | `/impl.reconcile` | Update implementation docs with status changes |
 | `/docs.reconcile` | Run all reconcile commands + consistency check |
+| `/parallel.status` | Show all active parallel sessions |
+| `/parallel.cleanup` | Clean up orphaned parallel sessions |
 
 ### Versioning
 
@@ -199,6 +201,63 @@ your-project/
 | `flight-rules adapter` | Generate agent-specific adapters (`--cursor`, `--claude`) |
 | `flight-rules update` | Update the Flight Rules CLI itself (`--channel` to switch dev/latest) |
 | `flight-rules ralph` | Run autonomous agent loop through task groups |
+| `flight-rules parallel` | Manage parallel dev sessions with git worktrees |
+
+---
+
+## Parallel Dev Sessions
+
+Flight Rules supports running multiple AI agents on the same project simultaneously using **git worktrees**. Each parallel session gets its own isolated directory and branch, so agents don't interfere with each other.
+
+### How It Works
+
+1. **Create a session** — `flight-rules parallel create <name>` creates a new worktree in a sibling directory (`../<project>-sessions/<name>/`) with a dedicated `session/<name>` branch
+2. **Work in isolation** — Open a new terminal, `cd` into the worktree, and run your AI agent. All file changes happen in the isolated directory
+3. **Track sessions** — `flight-rules parallel status` shows all active sessions, their branches, and ages
+4. **Integrate changes** — When done, `flight-rules parallel remove <name>` offers merge strategies: create a PR, merge directly, keep the branch, or abandon
+5. **Clean up** — `flight-rules parallel cleanup` detects orphaned sessions (e.g., from crashed terminals) and removes them
+
+### Session Directory Layout
+
+```
+/my-project                    ← main working directory
+/my-project-sessions/          ← parallel session worktrees
+  ├── auth-refactor/           ← Session A's worktree
+  ├── api-endpoints/           ← Session B's worktree
+  └── .manifest.json           ← tracks active sessions
+```
+
+### Commands
+
+```bash
+# Create a new parallel session
+flight-rules parallel create auth-refactor
+
+# See all active sessions
+flight-rules parallel status
+
+# End a session (offers merge workflow)
+flight-rules parallel remove auth-refactor
+
+# Clean up orphaned sessions
+flight-rules parallel cleanup
+
+# Skip confirmations
+flight-rules parallel cleanup --force
+flight-rules parallel remove auth-refactor --force
+```
+
+### Integration with Dev Sessions
+
+The `/dev-session.start` command offers a parallel session option after establishing goals. When ending a session in a worktree, `/dev-session.end` automatically offers the merge workflow.
+
+### Features
+
+- **Session manifest** — JSON file tracking all active sessions with metadata
+- **Env file copying** — Automatically copies `.env`, `.env.local`, `.env.development.local` to new worktrees
+- **Orphan detection** — Detects sessions where the worktree was removed without proper cleanup
+- **Merge conflict awareness** — Warns when the base branch has diverged since the session started
+- **Worktree validation** — Prevents creating nested parallel sessions
 
 ---
 
@@ -365,6 +424,7 @@ Tests are located in `tests/` and mirror the `src/` structure:
 | `tests/commands/init.test.ts` | 98.5% |
 | `tests/commands/upgrade.test.ts` | 100% |
 | `tests/commands/adapter.test.ts` | 79% |
+| `tests/commands/parallel.test.ts` | New |
 
 ### Releasing
 

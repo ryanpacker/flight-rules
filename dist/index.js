@@ -6,6 +6,7 @@ import { upgrade } from './commands/upgrade.js';
 import { adapter } from './commands/adapter.js';
 import { update } from './commands/update.js';
 import { ralph } from './commands/ralph.js';
+import { parallel } from './commands/parallel.js';
 import { getCliVersion } from './utils/files.js';
 import { checkForUpdate, shouldSkipUpdateCheck } from './utils/version-check.js';
 import { isInteractive } from './utils/interactive.js';
@@ -121,6 +122,15 @@ async function main() {
                 branch: parseBranchArg(args),
             });
             break;
+        case 'parallel': {
+            const subcommand = args[0] || '';
+            const subArgs = args.slice(1).filter(a => !a.startsWith('--'));
+            const parallelOptions = {
+                force: args.includes('--force'),
+            };
+            await parallel(subcommand, subArgs, parallelOptions);
+            break;
+        }
         case undefined:
         case '--help':
         case '-h':
@@ -144,6 +154,7 @@ ${pc.bold('Commands:')}
   adapter     Generate agent-specific adapter files
   update      Update the Flight Rules CLI itself
   ralph       Run autonomous agent loop through task groups
+  parallel    Manage parallel dev sessions with git worktrees
 
 ${pc.bold('Upgrade Options:')}
   --version <version>   Upgrade to a specific version (e.g., 0.1.4)
@@ -165,6 +176,15 @@ ${pc.bold('Ralph Options:')}
   --dry-run                 Show what would be executed without running
   --verbose                 Show full Claude output during execution
 
+${pc.bold('Parallel Subcommands:')}
+  parallel create <name>    Create a new parallel session in an isolated worktree
+  parallel status           Show all active parallel sessions
+  parallel cleanup          Detect and clean up orphaned sessions
+  parallel remove <name>    Remove a session (with merge workflow)
+
+${pc.bold('Parallel Options:')}
+  --force                   Skip confirmations (cleanup, remove)
+
 ${pc.bold('Examples:')}
   flight-rules init
   flight-rules upgrade
@@ -177,6 +197,10 @@ ${pc.bold('Examples:')}
   flight-rules ralph --area 2 --branch
   flight-rules ralph --area 2-cli-core --branch feature/cli-work
   flight-rules ralph --dry-run
+  flight-rules parallel create auth-refactor
+  flight-rules parallel status
+  flight-rules parallel cleanup
+  flight-rules parallel remove auth-refactor
 `);
 }
 /**

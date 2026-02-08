@@ -26,6 +26,14 @@ A curated list of important insights, patterns, and decisions that should inform
 
 **Implication:** For CLI tools that support multiple release channels, fetch the registry metadata once and read the appropriate dist-tag rather than trying to infer channel from version numbers.
 
+### Extract shared git helpers when patterns repeat
+
+**Context:** Both `ralph.ts` and `parallel.ts` implement nearly identical `runGitCommand` helpers for spawning git subprocesses.
+
+**Insight:** When the same spawn+promise pattern for running shell commands appears in multiple command files, it's a signal to extract to a shared utility (e.g., `src/utils/git.ts`). The current duplication is tolerable at two commands but should be consolidated before a third command needs it.
+
+**Implication:** Watch for repeated subprocess patterns across commands. A shared `runGitCommand` utility would reduce duplication and ensure consistent error handling.
+
 ### User-level config for cross-project CLI state
 
 **Context:** Deciding where to store version check cache and release channel preference.

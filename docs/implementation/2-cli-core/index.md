@@ -23,7 +23,8 @@ The Flight Rules command-line interface, distributed via npm.
 - **[2.3 Adapter Command](./2.3-adapter-command.md)** — Generate agent-specific adapters
 - **[2.4 Utility Functions](./2.4-utility-functions.md)** — Shared utilities for file operations and prompts
 - **[2.5 Update Command](./2.5-update-command.md)** — Check for and install CLI updates
+- **[2.6 Parallel Sessions](./2.6-parallel-sessions.md)** — Manage parallel dev sessions with git worktrees
 
 ## Status
 
-✅ Complete — All CLI commands implemented and tested.
+🟡 In Progress — Core CLI commands complete. Parallel sessions (2.6) newly added.

@@ -9,7 +9,7 @@ This document lists the major implementation areas for this project.
    - See: `1-documentation-reconciliation/`
 
 2. **CLI Core** — The Flight Rules command-line interface
-   - Status: ✅ Complete
+   - Status: 🟡 In Progress
    - See: `2-cli-core/`
 
 3. **Workflow Commands** — Prompt-based commands for AI agents

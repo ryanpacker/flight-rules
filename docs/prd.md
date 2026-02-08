@@ -35,6 +35,9 @@ The core problem: when an AI agent opens a project, it lacks context about what 
 9. **Implementation verification** — Audit completed tasks to verify that code actually matches what implementation specs claim, catching over-claimed completion, drift, and mismatched implementations.
    - *Measured by:* Running `/impl.validate` identifies discrepancies between specs and code
 
+10. **Parallel dev sessions** — Run multiple AI agents on the same project simultaneously using isolated git worktrees, with automatic session tracking, merge workflows, and cleanup of orphaned sessions.
+    - *Measured by:* Running `flight-rules parallel create <name>` creates an isolated worktree; `flight-rules parallel status` shows all active sessions; sessions integrate back via PR, merge, or manual workflow
+
 ## Non-Goals
 
 1. **Not a project management tool** — Flight Rules doesn't replace Linear, Jira, or GitHub Issues. It's documentation conventions, not a hosted system.
@@ -74,6 +77,10 @@ The core problem: when an AI agent opens a project, it lacks context about what 
 13. **As a developer refining implementation specs**, I want to clarify vague or incomplete task definitions so that the implementation guidance is specific enough to act on.
 
 14. **As a developer preparing for release**, I want to verify that all tasks marked complete actually meet their acceptance criteria, so that I can catch over-claimed or drifted implementations before shipping.
+
+15. **As a developer using multiple AI agents**, I want to run parallel coding sessions in isolated worktrees so that agents don't conflict with each other's file changes.
+
+16. **As a developer ending a parallel session**, I want to choose how to integrate the work (PR, merge, keep, abandon) so that I maintain control over what lands in my main branch.
 
 ## Constraints
 
@@ -126,3 +133,4 @@ The `manifest.json` file records:
 | Intelligent version management | `/version.bump` analyzes commits and recommends correct semver bump |
 | Project-specific release workflows | `/project.release` reads `docs/release.md` and executes defined steps |
 | Implementation verification | `/impl.validate` audits completed tasks and reports discrepancies with specific evidence |
+| Parallel dev sessions | `flight-rules parallel create` isolates sessions; `parallel status` tracks them; merge workflow integrates changes |

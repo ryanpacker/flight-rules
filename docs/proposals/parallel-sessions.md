@@ -1,8 +1,9 @@
 # Proposal: Parallel Dev Sessions with Git Worktrees
 
-**Status:** Draft
+**Status:** Implemented (Phase 1 + Phase 2)
 **Author:** Claude
 **Date:** 2025-01-17
+**Implemented:** 2026-02-07
 
 ---
 
@@ -369,15 +370,15 @@ Run each session in a Docker container with isolated filesystem.
 ## Implementation Phases
 
 ### Phase 1: Core Worktree Support
-- [ ] Modify `/dev-session.start` to offer parallel option
-- [ ] Implement worktree creation with manifest
-- [ ] Modify `/dev-session.end` for merge workflow
-- [ ] Add `/parallel.status` command
+- [x] Modify `/dev-session.start` to offer parallel option
+- [x] Implement worktree creation with manifest
+- [x] Modify `/dev-session.end` for merge workflow
+- [x] Add `/parallel.status` command
 
 ### Phase 2: Polish and Safety
-- [ ] Orphan detection and cleanup
-- [ ] Conflict detection before merge
-- [ ] Environment file handling
+- [x] Orphan detection and cleanup
+- [x] Conflict detection before merge
+- [x] Environment file handling
 - [ ] Better guidance for port/resource conflicts
 
 ### Phase 3: Advanced Features (Optional)
