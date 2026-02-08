@@ -4,7 +4,6 @@ import { spawn } from 'child_process';
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { isFlightRulesInstalled, getFlightRulesDir } from '../utils/files.js';
-const COMPLETION_SIGNAL = '<ralph-signal>COMPLETE</ralph-signal>';
 /**
  * Generate a default branch name for Ralph work
  */
@@ -65,7 +64,7 @@ async function createAndCheckoutBranch(branchName) {
     return { success: true };
 }
 /**
- * Build area constraint text to append to prompt
+ * Build area constraint text to append to discovery prompt
  */
 function buildAreaConstraint(area) {
     return `
@@ -78,7 +77,7 @@ function buildAreaConstraint(area) {
 
 - Only scan \`docs/implementation/${area}*/\` for task groups
 - Ignore all other areas
-- If no incomplete task groups exist in Area ${area}, output the completion signal
+- If no incomplete task groups exist in Area ${area}, respond with ALL_COMPLETE
 `;
 }
 /**
@@ -178,22 +177,92 @@ function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 /**
+ * Parse the discovery response from Claude into TaskGroupPlan objects.
+ * Returns null if the response cannot be parsed (tags not found).
+ * Returns empty array if ALL_COMPLETE.
+ */
+export function parseDiscoveryResponse(output) {
+    // Extract content between <ralph-discovery> tags
+    const match = output.match(/<ralph-discovery>([\s\S]*?)<\/ralph-discovery>/);
+    if (!match) {
+        return null;
+    }
+    const content = match[1].trim();
+    // Handle ALL_COMPLETE case
+    if (content === 'ALL_COMPLETE') {
+        return [];
+    }
+    const taskGroups = [];
+    let currentGroup = null;
+    for (const line of content.split('\n')) {
+        const trimmed = line.trim();
+        if (!trimmed)
+            continue;
+        if (trimmed.startsWith('TASK_GROUP|')) {
+            const parts = trimmed.split('|');
+            if (parts.length >= 5) {
+                currentGroup = {
+                    id: parts[1],
+                    title: parts[2],
+                    filePath: parts[3],
+                    area: parts[4],
+                    incompleteTasks: [],
+                };
+                taskGroups.push(currentGroup);
+            }
+        }
+        else if (trimmed.startsWith('TASK|') && currentGroup) {
+            const parts = trimmed.split('|');
+            if (parts.length >= 4) {
+                currentGroup.incompleteTasks.push({
+                    id: parts[1],
+                    title: parts[2],
+                    status: parts[3],
+                });
+            }
+        }
+        // Skip malformed lines silently
+    }
+    return taskGroups;
+}
+/**
+ * Build an execution prompt from the template and a task group plan.
+ */
+export function buildExecutionPrompt(template, taskGroup) {
+    // Render incomplete tasks as markdown bullet points
+    const tasksList = taskGroup.incompleteTasks
+        .map((t) => `- **${t.id}**: ${t.title} (${t.status})`)
+        .join('\n');
+    return template
+        .replace(/\{\{TASK_GROUP_ID\}\}/g, taskGroup.id)
+        .replace(/\{\{TASK_GROUP_TITLE\}\}/g, taskGroup.title)
+        .replace(/\{\{TASK_GROUP_FILE_PATH\}\}/g, taskGroup.filePath)
+        .replace(/\{\{INCOMPLETE_TASKS_LIST\}\}/g, tasksList);
+}
+/**
  * Run the Ralph Loop - an autonomous agent loop that works through task groups
  */
 export async function ralph(options) {
     const cwd = process.cwd();
     const flightRulesDir = getFlightRulesDir(cwd);
-    const promptPath = join(flightRulesDir, 'prompts', 'ralph-loop.md');
+    const discoveryPromptPath = join(flightRulesDir, 'prompts', 'ralph-discovery.md');
+    const executionPromptPath = join(flightRulesDir, 'prompts', 'ralph-execution.md');
     // Verify Flight Rules is installed
     if (!isFlightRulesInstalled(cwd)) {
         p.log.error('Flight Rules is not installed in this directory.');
         p.log.info('Run `flight-rules init` first.');
         return;
     }
-    // Verify prompt file exists
-    if (!existsSync(promptPath)) {
-        p.log.error('Ralph prompt file not found.');
-        p.log.info(`Expected at: ${promptPath}`);
+    // Verify both prompt files exist
+    if (!existsSync(discoveryPromptPath)) {
+        p.log.error('Ralph discovery prompt file not found.');
+        p.log.info(`Expected at: ${discoveryPromptPath}`);
+        p.log.info('You may need to run `flight-rules upgrade` to get the latest files.');
+        return;
+    }
+    if (!existsSync(executionPromptPath)) {
+        p.log.error('Ralph execution prompt file not found.');
+        p.log.info(`Expected at: ${executionPromptPath}`);
         p.log.info('You may need to run `flight-rules upgrade` to get the latest files.');
         return;
     }
@@ -204,10 +273,12 @@ export async function ralph(options) {
         p.log.info('Install it with: npm install -g @anthropic-ai/claude-code');
         return;
     }
-    // Read the prompt content and optionally append area constraint
-    let promptContent = readFileSync(promptPath, 'utf-8');
+    // Read prompt files
+    let discoveryPrompt = readFileSync(discoveryPromptPath, 'utf-8');
+    const executionTemplate = readFileSync(executionPromptPath, 'utf-8');
+    // Optionally append area constraint to discovery prompt
     if (options.area) {
-        promptContent += buildAreaConstraint(options.area);
+        discoveryPrompt += buildAreaConstraint(options.area);
     }
     // Determine branch name if branching is requested
     let branchName;
@@ -217,15 +288,17 @@ export async function ralph(options) {
     // Dry run mode
     if (options.dryRun) {
         p.log.info(pc.yellow('Dry run mode - showing what would be executed:'));
-        p.log.message(`  Prompt file: ${promptPath}`);
-        p.log.message(`  Max iterations: ${options.maxIterations}`);
+        p.log.message(`  Discovery prompt: ${discoveryPromptPath}`);
+        p.log.message(`  Execution prompt: ${executionPromptPath}`);
+        p.log.message(`  Max task groups: ${options.maxIterations}`);
         if (options.area) {
             p.log.message(`  Area constraint: ${options.area}`);
         }
         if (branchName) {
             p.log.message(`  Branch: ${branchName}`);
         }
-        p.log.message(`  Command: claude --dangerously-skip-permissions -p < "${promptPath}"`);
+        p.log.message('  Phase 1: Discovery — identify incomplete task groups');
+        p.log.message('  Phase 2: Execution — one Claude instance per task group');
         return;
     }
     // Handle branch creation if requested
@@ -249,7 +322,7 @@ export async function ralph(options) {
     // Start the loop
     console.log();
     p.intro(pc.bgMagenta(pc.white(' Flight Rules Ralph Loop ')));
-    p.log.info(`Starting autonomous loop with max ${options.maxIterations} iterations`);
+    p.log.info(`Two-phase mode: discover then execute (max ${options.maxIterations} task groups)`);
     if (options.area) {
         p.log.info(`Targeting Area: ${pc.cyan(options.area)}`);
     }
@@ -258,40 +331,97 @@ export async function ralph(options) {
     }
     p.log.warn('Press Ctrl+C to stop the loop at any time');
     console.log();
-    for (let i = 1; i <= options.maxIterations; i++) {
+    // ── Phase 1: Discovery ──────────────────────────────────────────────
+    p.log.step(pc.magenta('Phase 1: Discovery'));
+    p.log.info('Scanning implementation docs for incomplete task groups...');
+    console.log();
+    let taskGroups;
+    try {
+        const discoveryResult = await runClaudeWithPrompt(discoveryPrompt, options.verbose);
+        if (discoveryResult.exitCode !== 0) {
+            p.log.warn(`Discovery phase exited with code ${discoveryResult.exitCode}`);
+        }
+        const parsed = parseDiscoveryResponse(discoveryResult.output);
+        if (parsed === null) {
+            p.log.error('Could not parse discovery response. Expected <ralph-discovery> tags.');
+            p.log.info('Run with --verbose to see the full Claude output.');
+            p.outro(pc.red('Ralph loop aborted'));
+            return;
+        }
+        taskGroups = parsed;
+    }
+    catch (error) {
+        p.log.error(`Discovery phase failed: ${error instanceof Error ? error.message : String(error)}`);
+        p.outro(pc.red('Ralph loop aborted'));
+        return;
+    }
+    // Handle ALL_COMPLETE
+    if (taskGroups.length === 0) {
+        console.log();
+        p.log.success(pc.green('All task groups complete!'));
+        p.outro(pc.green('Ralph loop finished — nothing to do'));
+        return;
+    }
+    // Display discovered task groups
+    console.log();
+    p.log.info(`Found ${taskGroups.length} incomplete task group(s):`);
+    for (const tg of taskGroups) {
+        p.log.message(`  ${pc.cyan(tg.id)} — ${tg.title} (${tg.incompleteTasks.length} tasks)`);
+    }
+    console.log();
+    // Limit to max iterations
+    const groupsToExecute = taskGroups.slice(0, options.maxIterations);
+    if (taskGroups.length > options.maxIterations) {
+        p.log.info(`Will execute ${options.maxIterations} of ${taskGroups.length} task groups (--max-iterations)`);
+        console.log();
+    }
+    // ── Phase 2: Execution ──────────────────────────────────────────────
+    p.log.step(pc.magenta('Phase 2: Execution'));
+    console.log();
+    let completed = 0;
+    let failed = 0;
+    for (let i = 0; i < groupsToExecute.length; i++) {
+        const taskGroup = groupsToExecute[i];
         const separator = '='.repeat(50);
         p.log.step(pc.dim(separator));
-        p.log.step(pc.magenta(`  Ralph Iteration ${i} of ${options.maxIterations}`));
+        p.log.step(pc.magenta(`  Task Group ${i + 1} of ${groupsToExecute.length}: ${taskGroup.id} — ${taskGroup.title}`));
         p.log.step(pc.dim(separator));
         console.log();
         try {
-            const result = await runClaudeWithPrompt(promptContent, options.verbose);
-            // Check for completion signal
-            if (result.output.includes(COMPLETION_SIGNAL)) {
-                console.log();
-                p.log.success(pc.green('All task groups complete!'));
-                p.log.info(`Finished at iteration ${i} of ${options.maxIterations}`);
-                p.outro(pc.green('Ralph loop finished successfully'));
-                return;
-            }
+            const executionPrompt = buildExecutionPrompt(executionTemplate, taskGroup);
+            const result = await runClaudeWithPrompt(executionPrompt, options.verbose);
             if (result.exitCode !== 0) {
-                p.log.warn(`Claude exited with code ${result.exitCode}`);
+                p.log.warn(`Task group ${taskGroup.id} exited with code ${result.exitCode}`);
+                failed++;
             }
-            p.log.info(`Iteration ${i} complete. Continuing...`);
-            // Small delay between iterations to allow for any cleanup
-            if (i < options.maxIterations) {
-                await sleep(2000);
+            else {
+                p.log.success(`Task group ${taskGroup.id} complete`);
+                completed++;
             }
         }
         catch (error) {
-            p.log.error(`Error in iteration ${i}: ${error instanceof Error ? error.message : String(error)}`);
-            // Continue to next iteration despite errors
+            p.log.error(`Error executing task group ${taskGroup.id}: ${error instanceof Error ? error.message : String(error)}`);
+            failed++;
+            // Continue to next task group despite errors
+        }
+        // Small delay between executions
+        if (i < groupsToExecute.length - 1) {
+            await sleep(2000);
         }
     }
-    // Reached max iterations
+    // Summary
     console.log();
-    p.log.warn(`Reached max iterations (${options.maxIterations}) without completing all tasks.`);
-    p.log.info('Check docs/progress.md and docs/ralph_logs/ for current status.');
-    p.log.info('Run `flight-rules ralph` again to continue.');
-    p.outro(pc.yellow('Ralph loop stopped'));
+    const separator = '='.repeat(50);
+    p.log.step(pc.dim(separator));
+    p.log.info(`Summary: ${completed} completed, ${failed} failed out of ${groupsToExecute.length} task groups`);
+    if (taskGroups.length > options.maxIterations) {
+        p.log.info(`${taskGroups.length - options.maxIterations} task group(s) remaining. Run \`flight-rules ralph\` again to continue.`);
+    }
+    if (failed > 0) {
+        p.log.info('Check docs/ralph_logs/ for details on failures.');
+        p.outro(pc.yellow('Ralph loop finished with errors'));
+    }
+    else {
+        p.outro(pc.green('Ralph loop finished successfully'));
+    }
 }

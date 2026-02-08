@@ -174,7 +174,7 @@ ${pc.bold('Adapter Options:')}
   --all       Generate all adapters
 
 ${pc.bold('Ralph Options:')}
-  --max-iterations, -n <n>  Maximum iterations before stopping (default: 10)
+  --max-iterations, -n <n>  Maximum task groups to execute (default: 10)
   --area <id>               Focus on a specific implementation area (e.g., 2 or 2-cli-core)
   --branch [name]           Create a new branch before starting (auto-generates if no name)
   --dry-run                 Show what would be executed without running
