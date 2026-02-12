@@ -25,6 +25,7 @@ async function copyDocsFromTemplates(templatesDir: string, docsDir: string, skip
   ensureDir(docsDir);
   ensureDir(join(docsDir, 'implementation'));
   ensureDir(join(docsDir, 'session_logs'));
+  ensureDir(join(docsDir, 'backlog'));
   
   for (const file of DOC_FILES) {
     const srcPath = join(templatesDir, file.src);

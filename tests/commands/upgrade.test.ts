@@ -437,6 +437,7 @@ describe('upgrade.ts', () => {
       expect(ensureDir).toHaveBeenCalledWith(join(mockCwd, 'docs'));
       expect(ensureDir).toHaveBeenCalledWith(join(mockCwd, 'docs', 'implementation'));
       expect(ensureDir).toHaveBeenCalledWith(join(mockCwd, 'docs', 'session_logs'));
+      expect(ensureDir).toHaveBeenCalledWith(join(mockCwd, 'docs', 'backlog'));
     });
 
     it('should copy new templates when they do not exist in docs/', async () => {

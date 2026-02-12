@@ -6,6 +6,14 @@ A running log of sessions and milestones.
 
 ## Session Logs
 
+### 2026-02-11
+
+- Implemented all four backlog commands (`/backlog.add`, `/backlog.clarify`, `/backlog.list`, `/backlog.promote`)
+- Updated `init` and `upgrade` to create `docs/backlog/` directory
+- All 254 tests passing
+- Workflow Commands area (3) now fully complete (3.1–3.9)
+- See: [session_logs/20260211_session.md](session_logs/20260211_session.md)
+
 ### 2026-02-07
 
 - Implemented parallel dev sessions feature (`flight-rules parallel` command)

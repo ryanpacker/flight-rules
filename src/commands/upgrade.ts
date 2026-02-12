@@ -35,6 +35,7 @@ function copyNewDocsFromTemplates(templatesDir: string, docsDir: string): string
   ensureDir(docsDir);
   ensureDir(join(docsDir, 'implementation'));
   ensureDir(join(docsDir, 'session_logs'));
+  ensureDir(join(docsDir, 'backlog'));
   
   const copied: string[] = [];
   

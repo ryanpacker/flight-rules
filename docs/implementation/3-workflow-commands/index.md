@@ -26,10 +26,11 @@ Prompt-based commands that AI agents execute to follow Flight Rules workflows.
 - **[3.6 Prompt Command](./3.6-prompt-command.md)** — Refine and improve prompts
 - **[3.7 Release Commands](./3.7-release-commands.md)** — Version bumping and release workflows
 - **[3.8 Parallel Session Commands](./3.8-parallel-commands.md)** — Parallel session status and cleanup workflow commands
+- **[3.9 Backlog Commands](./3.9-backlog-commands.md)** — Capture, clarify, review, and promote half-formed ideas
 
 ## Status
 
-🟡 In Progress — Core workflow commands (3.1-3.7) are complete. Parallel session commands (3.8) newly added.
+✅ Complete — All workflow command groups (3.1-3.9) are implemented.
 
 ## Note
 

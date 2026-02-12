@@ -38,6 +38,9 @@ The core problem: when an AI agent opens a project, it lacks context about what 
 10. **Parallel dev sessions** — Run multiple AI agents on the same project simultaneously using isolated git worktrees, with automatic session tracking, merge workflows, and cleanup of orphaned sessions.
     - *Measured by:* Running `flight-rules parallel create <name>` creates an isolated worktree; `flight-rules parallel status` shows all active sessions; sessions integrate back via PR, merge, or manual workflow
 
+11. **Planning backlog for idea capture** — Provide a low-friction way to capture half-formed ideas, with commands to clarify, review, and promote them into formal PRD goals and implementation specs.
+    - *Measured by:* Capturing an idea takes a single command with no required fields beyond a description; ideas can be clarified, listed, and promoted to the formal workflow
+
 ## Non-Goals
 
 1. **Not a project management tool** — Flight Rules doesn't replace Linear, Jira, or GitHub Issues. It's documentation conventions, not a hosted system.
@@ -81,6 +84,10 @@ The core problem: when an AI agent opens a project, it lacks context about what 
 15. **As a developer using multiple AI agents**, I want to run parallel coding sessions in isolated worktrees so that agents don't conflict with each other's file changes.
 
 16. **As a developer ending a parallel session**, I want to choose how to integrate the work (PR, merge, keep, abandon) so that I maintain control over what lands in my main branch.
+
+17. **As a developer using Flight Rules**, I want to quickly stash ideas for future work so that I don't lose them and don't have to formalize them immediately.
+
+18. **As a developer reviewing my backlog**, I want to interactively clarify a rough idea so that it becomes specific enough to act on or promote to the PRD.
 
 ## Constraints
 
@@ -134,3 +141,4 @@ The `manifest.json` file records:
 | Project-specific release workflows | `/project.release` reads `docs/release.md` and executes defined steps |
 | Implementation verification | `/impl.validate` audits completed tasks and reports discrepancies with specific evidence |
 | Parallel dev sessions | `flight-rules parallel create` isolates sessions; `parallel status` tracks them; merge workflow integrates changes |
+| Planning backlog | `/backlog.add` captures an idea in seconds; `/backlog.list` gives a clear overview; `/backlog.promote` feeds a clarified idea into `/feature.add` |

@@ -262,6 +262,7 @@ describe('init.ts', () => {
       expect(ensureDir).toHaveBeenCalledWith(join(mockCwd, 'docs'));
       expect(ensureDir).toHaveBeenCalledWith(join(mockCwd, 'docs/implementation'));
       expect(ensureDir).toHaveBeenCalledWith(join(mockCwd, 'docs/session_logs'));
+      expect(ensureDir).toHaveBeenCalledWith(join(mockCwd, 'docs/backlog'));
     });
 
     it('should copy all doc template files including tech-stack.md', async () => {
