@@ -20,6 +20,7 @@ function copyNewDocsFromTemplates(templatesDir, docsDir) {
     ensureDir(docsDir);
     ensureDir(join(docsDir, 'implementation'));
     ensureDir(join(docsDir, 'session_logs'));
+    ensureDir(join(docsDir, 'backlog'));
     const copied = [];
     for (const file of DOC_FILES) {
         const srcPath = join(templatesDir, file.src);
