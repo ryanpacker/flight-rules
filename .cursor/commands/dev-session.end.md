@@ -76,4 +76,19 @@ If yes, help prepare a commit message that:
 - References the session log file
 - Is concise but meaningful
 
+## 8. Handle Parallel Session (If Applicable)
+
+If this session is running in a parallel worktree (check if the current directory is inside a `*-sessions/` worktree path, or check `git rev-parse --git-dir` for linked worktrees):
+
+1. **Ensure all changes are committed** — parallel sessions require committed changes before cleanup
+2. **Offer merge strategy:**
+   > "This is a parallel session. How would you like to integrate these changes?"
+   > - **Create a PR** (recommended for review)
+   > - **Merge directly to main** (for small/safe changes)
+   > - **Keep branch for later** (don't merge yet, but clean up worktree)
+   > - **Abandon** (discard all changes)
+
+3. Run `flight-rules parallel remove <session-name>` which will execute the chosen strategy and clean up the worktree
+4. If choosing to create a PR, include the session summary in the PR description
+
 

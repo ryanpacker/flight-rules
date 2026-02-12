@@ -43,7 +43,25 @@ Include:
 - Technical approach
 - Task breakdown
 
-## 5. Confirm Before Coding
+## 5. Offer Parallel Session (Optional)
+
+After establishing goals, check if the user wants to run this session in parallel:
+
+> "Would you like to run this session in an isolated worktree? This allows other agents to work on the project simultaneously."
+>
+> - **Standard session** (work in main directory)
+> - **Parallel session** (create isolated worktree)
+
+If parallel is chosen:
+
+1. Run `flight-rules parallel create <session-name>` (derive a short kebab-case name from the goals)
+2. Note the worktree path in the session log header: `**Worktree:** <path>`
+3. Instruct the user to open a new terminal in the worktree directory and run `claude`
+4. The rest of the session workflow proceeds normally within the worktree
+
+**Detecting existing parallel context:** If you notice the current directory is inside a `*-sessions/` worktree (check with `git rev-parse --git-dir` — linked worktrees show `.git/worktrees/<name>`), note this in the session log and skip offering the parallel option.
+
+## 6. Confirm Before Coding
 
 Present the plan to the user and ask:
 
