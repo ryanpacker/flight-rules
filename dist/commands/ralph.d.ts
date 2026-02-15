@@ -17,6 +17,10 @@ export interface TaskGroupPlan {
     }>;
 }
 /**
+ * Format a timestamp for verbose output: [HH:MM:SS]
+ */
+export declare function formatTimestamp(): string;
+/**
  * Parse the discovery response from Claude into TaskGroupPlan objects.
  * Returns null if the response cannot be parsed (tags not found).
  * Returns empty array if ALL_COMPLETE.

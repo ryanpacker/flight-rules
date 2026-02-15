@@ -62,7 +62,7 @@ import * as p from '@clack/prompts';
 import { existsSync, readFileSync } from 'fs';
 import { spawn } from 'child_process';
 import { isFlightRulesInstalled, getFlightRulesDir } from '../../src/utils/files.js';
-import { ralph, RalphOptions, parseDiscoveryResponse, buildExecutionPrompt, TaskGroupPlan } from '../../src/commands/ralph.js';
+import { ralph, RalphOptions, parseDiscoveryResponse, buildExecutionPrompt, TaskGroupPlan, formatTimestamp } from '../../src/commands/ralph.js';
 
 // Helper to create a mock spawn process
 function createMockProcess(
@@ -642,5 +642,82 @@ ALL_COMPLETE
         expect.stringContaining('Switched to new branch: new-branch')
       );
     });
+  });
+
+  describe('verbose output formatting', () => {
+    let stdoutWriteSpy: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+      stdoutWriteSpy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    });
+
+    afterEach(() => {
+      stdoutWriteSpy.mockRestore();
+    });
+
+    it('should prepend timestamp to content block text in verbose mode', async () => {
+      // Stream-json line with a content_block_delta
+      const streamOutput = '{"type":"content_block_delta","delta":{"text":"Hello world"}}\n{"type":"content_block_stop"}\n';
+
+      const discoveryOutput = `<ralph-discovery>\nALL_COMPLETE\n</ralph-discovery>`;
+
+      vi.mocked(spawn)
+        .mockImplementationOnce(() => createMockProcess(0) as any)                     // --version
+        .mockImplementationOnce(() => createMockProcess(0, discoveryOutput + '\n' + streamOutput) as any); // discovery
+
+      await ralph({ ...defaultOptions, verbose: true });
+
+      const writes = stdoutWriteSpy.mock.calls.map(c => c[0]);
+      // Should have a write that matches the timestamp pattern [HH:MM:SS]
+      const hasTimestamp = writes.some(w => typeof w === 'string' && /^\[\d{2}:\d{2}:\d{2}\] $/.test(w));
+      expect(hasTimestamp).toBe(true);
+    });
+
+    it('should add blank line between content blocks in verbose mode', async () => {
+      const streamOutput = '{"type":"content_block_delta","delta":{"text":"First block"}}\n{"type":"content_block_stop"}\n{"type":"content_block_delta","delta":{"text":"Second block"}}\n{"type":"content_block_stop"}\n';
+
+      const discoveryOutput = `<ralph-discovery>\nALL_COMPLETE\n</ralph-discovery>`;
+
+      vi.mocked(spawn)
+        .mockImplementationOnce(() => createMockProcess(0) as any)                     // --version
+        .mockImplementationOnce(() => createMockProcess(0, discoveryOutput + '\n' + streamOutput) as any); // discovery
+
+      await ralph({ ...defaultOptions, verbose: true });
+
+      const writes = stdoutWriteSpy.mock.calls.map(c => c[0]);
+      // content_block_stop should produce '\n\n' (newline + blank line)
+      const doubleNewlines = writes.filter(w => w === '\n\n');
+      expect(doubleNewlines.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('should reset timestamp flag after each content block stop', async () => {
+      const streamOutput = [
+        '{"type":"content_block_delta","delta":{"text":"Block 1"}}',
+        '{"type":"content_block_stop"}',
+        '{"type":"content_block_delta","delta":{"text":"Block 2"}}',
+        '{"type":"content_block_stop"}',
+        '',
+      ].join('\n');
+
+      const discoveryOutput = `<ralph-discovery>\nALL_COMPLETE\n</ralph-discovery>`;
+
+      vi.mocked(spawn)
+        .mockImplementationOnce(() => createMockProcess(0) as any)                     // --version
+        .mockImplementationOnce(() => createMockProcess(0, discoveryOutput + '\n' + streamOutput) as any); // discovery
+
+      await ralph({ ...defaultOptions, verbose: true });
+
+      const writes = stdoutWriteSpy.mock.calls.map(c => c[0]);
+      // Should have two timestamps — one per content block
+      const timestamps = writes.filter(w => typeof w === 'string' && /^\[\d{2}:\d{2}:\d{2}\] $/.test(w));
+      expect(timestamps.length).toBe(2);
+    });
+  });
+});
+
+describe('formatTimestamp', () => {
+  it('should return timestamp in [HH:MM:SS] format', () => {
+    const result = formatTimestamp();
+    expect(result).toMatch(/^\[\d{2}:\d{2}:\d{2}\]$/);
   });
 });

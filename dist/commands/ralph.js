@@ -81,6 +81,16 @@ function buildAreaConstraint(area) {
 `;
 }
 /**
+ * Format a timestamp for verbose output: [HH:MM:SS]
+ */
+export function formatTimestamp() {
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    return `[${hours}:${minutes}:${seconds}]`;
+}
+/**
  * Check if Claude CLI is available
  */
 async function isClaudeCliAvailable() {
@@ -116,6 +126,7 @@ async function runClaudeWithPrompt(promptContent, verbose) {
         let output = '';
         let errorOutput = '';
         let lineBuffer = ''; // Buffer for incomplete JSON lines
+        let needsTimestamp = true; // Track whether next text output needs a timestamp
         claude.stdout?.on('data', (data) => {
             const text = data.toString();
             output += text;
@@ -134,16 +145,25 @@ async function runClaudeWithPrompt(promptContent, verbose) {
                         if (parsed.type === 'assistant' && parsed.message?.content) {
                             for (const block of parsed.message.content) {
                                 if (block.type === 'text' && block.text) {
+                                    if (needsTimestamp) {
+                                        process.stdout.write(`${formatTimestamp()} `);
+                                        needsTimestamp = false;
+                                    }
                                     process.stdout.write(block.text);
                                 }
                             }
                         }
                         else if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
+                            if (needsTimestamp) {
+                                process.stdout.write(`${formatTimestamp()} `);
+                                needsTimestamp = false;
+                            }
                             process.stdout.write(parsed.delta.text);
                         }
                         else if (parsed.type === 'content_block_stop') {
-                            // Add newline after each content block ends
-                            process.stdout.write('\n');
+                            // Add newline + blank line after each content block ends
+                            process.stdout.write('\n\n');
+                            needsTimestamp = true;
                         }
                     }
                     catch {
