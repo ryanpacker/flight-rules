@@ -160,31 +160,32 @@ async function runClaudeWithPrompt(
       stdio: ['pipe', 'pipe', 'pipe'],
     });
 
-    let output = '';
+    let reassembledText = ''; // Plain text reassembled from stream-json fragments
+    let resultText = ''; // Full text from the final result event (fallback)
     let errorOutput = '';
     let lineBuffer = ''; // Buffer for incomplete JSON lines
     let needsTimestamp = true; // Track whether next text output needs a timestamp
 
     claude.stdout?.on('data', (data) => {
       const text = data.toString();
-      output += text;
 
-      if (verbose) {
-        // Prepend any buffered partial line from previous chunk
-        const fullText = lineBuffer + text;
-        const lines = fullText.split('\n');
+      // Parse stream-json lines to reassemble plain text output
+      const fullText = lineBuffer + text;
+      const lines = fullText.split('\n');
 
-        // Last element might be incomplete - save it for next chunk
-        lineBuffer = lines.pop() || '';
+      // Last element might be incomplete - save it for next chunk
+      lineBuffer = lines.pop() || '';
 
-        for (const line of lines) {
-          if (!line.trim()) continue;
-          try {
-            const parsed = JSON.parse(line);
-            // Handle different message types in stream-json format
-            if (parsed.type === 'assistant' && parsed.message?.content) {
-              for (const block of parsed.message.content) {
-                if (block.type === 'text' && block.text) {
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        try {
+          const parsed = JSON.parse(line);
+          // Handle different message types in stream-json format
+          if (parsed.type === 'assistant' && parsed.message?.content) {
+            for (const block of parsed.message.content) {
+              if (block.type === 'text' && block.text) {
+                reassembledText += block.text;
+                if (verbose) {
                   if (needsTimestamp) {
                     process.stdout.write(`${formatTimestamp()} `);
                     needsTimestamp = false;
@@ -192,20 +193,27 @@ async function runClaudeWithPrompt(
                   process.stdout.write(block.text);
                 }
               }
-            } else if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
+            }
+          } else if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
+            reassembledText += parsed.delta.text;
+            if (verbose) {
               if (needsTimestamp) {
                 process.stdout.write(`${formatTimestamp()} `);
                 needsTimestamp = false;
               }
               process.stdout.write(parsed.delta.text);
-            } else if (parsed.type === 'content_block_stop') {
+            }
+          } else if (parsed.type === 'content_block_stop') {
+            if (verbose) {
               // Add newline + blank line after each content block ends
               process.stdout.write('\n\n');
               needsTimestamp = true;
             }
-          } catch {
-            // Not valid JSON, skip
+          } else if (parsed.type === 'result' && typeof parsed.result === 'string') {
+            resultText = parsed.result;
           }
+        } catch {
+          // Not valid JSON, skip
         }
       }
     });
@@ -219,6 +227,28 @@ async function runClaudeWithPrompt(
     });
 
     claude.on('close', (code) => {
+      // Flush any remaining data in lineBuffer
+      if (lineBuffer.trim()) {
+        try {
+          const parsed = JSON.parse(lineBuffer);
+          if (parsed.type === 'assistant' && parsed.message?.content) {
+            for (const block of parsed.message.content) {
+              if (block.type === 'text' && block.text) {
+                reassembledText += block.text;
+              }
+            }
+          } else if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
+            reassembledText += parsed.delta.text;
+          } else if (parsed.type === 'result' && typeof parsed.result === 'string') {
+            resultText = parsed.result;
+          }
+        } catch {
+          // Not valid JSON, skip
+        }
+      }
+
+      // Prefer reassembled streaming text; fall back to result event text
+      const output = reassembledText || resultText;
       resolve({ output, exitCode: code ?? 0 });
     });
 

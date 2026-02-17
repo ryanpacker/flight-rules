@@ -64,17 +64,34 @@ import { spawn } from 'child_process';
 import { isFlightRulesInstalled, getFlightRulesDir } from '../../src/utils/files.js';
 import { ralph, RalphOptions, parseDiscoveryResponse, buildExecutionPrompt, TaskGroupPlan, formatTimestamp } from '../../src/commands/ralph.js';
 
+/**
+ * Wrap plain text as stream-json output that runClaudeWithPrompt can reassemble.
+ * Each line of text becomes a content_block_delta event, followed by content_block_stop.
+ */
+function wrapAsStreamJson(text: string): string {
+  if (!text) return '';
+  const escaped = text.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
+  return [
+    `{"type":"content_block_delta","delta":{"text":"${escaped}"}}`,
+    '{"type":"content_block_stop"}',
+    '',
+  ].join('\n');
+}
+
 // Helper to create a mock spawn process
+// stdout should be plain text — it will be wrapped as stream-json automatically
 function createMockProcess(
   exitCode: number = 0,
   stdout: string = '',
-  stderr: string = ''
+  stderr: string = '',
+  { rawStreamJson }: { rawStreamJson?: boolean } = {}
 ) {
+  const streamStdout = stdout ? (rawStreamJson ? stdout : wrapAsStreamJson(stdout)) : '';
   return {
     stdout: {
       on: vi.fn((event: string, callback: (data: Buffer) => void) => {
-        if (event === 'data' && stdout) {
-          process.nextTick(() => callback(Buffer.from(stdout)));
+        if (event === 'data' && streamStdout) {
+          process.nextTick(() => callback(Buffer.from(streamStdout)));
         }
       }),
     },
@@ -511,6 +528,47 @@ TASK|2.1.1|Task B|planned
       );
     });
 
+    it('should flush lineBuffer when stream ends without trailing newline', async () => {
+      // Simulate stream output where the last JSON line has no trailing newline,
+      // so it stays in lineBuffer and must be flushed on close
+      const discoveryText = `<ralph-discovery>\nTASK_GROUP|1.1|Setup|docs/impl/1.1.md|1-setup\nTASK|1.1.1|Init|planned\n</ralph-discovery>`;
+      const escaped = discoveryText.replace(/\n/g, '\\n');
+      // No trailing newline — the last line stays in lineBuffer
+      const streamOutput = `{"type":"content_block_delta","delta":{"text":"${escaped}"}}`;
+
+      vi.mocked(spawn)
+        .mockImplementationOnce(() => createMockProcess(0) as any)           // --version
+        .mockImplementationOnce(() => createMockProcess(0, streamOutput, '', { rawStreamJson: true }) as any) // discovery
+        .mockImplementationOnce(() => createMockProcess(0) as any);          // exec 1
+
+      await ralph({ ...defaultOptions, maxIterations: 10 });
+
+      // Should parse the task group, not report ALL_COMPLETE
+      expect(p.log.success).toHaveBeenCalledWith(expect.stringContaining('1.1 complete'));
+      expect(p.log.success).not.toHaveBeenCalledWith(expect.stringContaining('All task groups complete!'));
+    });
+
+    it('should fall back to result event text when streaming deltas are empty', async () => {
+      const discoveryText = `<ralph-discovery>\nTASK_GROUP|1.1|Setup|docs/impl/1.1.md|1-setup\nTASK|1.1.1|Init|planned\n</ralph-discovery>`;
+      const escapedResult = discoveryText.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
+      // Only a result event, no content_block_delta events
+      const streamOutput = [
+        `{"type":"result","subtype":"success","result":"${escapedResult}"}`,
+        '',
+      ].join('\n');
+
+      vi.mocked(spawn)
+        .mockImplementationOnce(() => createMockProcess(0) as any)           // --version
+        .mockImplementationOnce(() => createMockProcess(0, streamOutput, '', { rawStreamJson: true }) as any) // discovery
+        .mockImplementationOnce(() => createMockProcess(0) as any);          // exec 1
+
+      await ralph({ ...defaultOptions, maxIterations: 10 });
+
+      // Should parse the task group from the result fallback
+      expect(p.log.success).toHaveBeenCalledWith(expect.stringContaining('1.1 complete'));
+      expect(p.log.success).not.toHaveBeenCalledWith(expect.stringContaining('All task groups complete!'));
+    });
+
     it('should count non-zero exit codes as failures', async () => {
       const discoveryOutput = `<ralph-discovery>
 TASK_GROUP|1.1|Group A|path-a.md|1-area
@@ -656,14 +714,18 @@ ALL_COMPLETE
     });
 
     it('should prepend timestamp to content block text in verbose mode', async () => {
-      // Stream-json line with a content_block_delta
-      const streamOutput = '{"type":"content_block_delta","delta":{"text":"Hello world"}}\n{"type":"content_block_stop"}\n';
-
-      const discoveryOutput = `<ralph-discovery>\nALL_COMPLETE\n</ralph-discovery>`;
+      // Raw stream-json — the verbose tests need raw format to test the streaming display logic
+      const streamOutput = [
+        '{"type":"content_block_delta","delta":{"text":"<ralph-discovery>\\nALL_COMPLETE\\n</ralph-discovery>"}}',
+        '{"type":"content_block_stop"}',
+        '{"type":"content_block_delta","delta":{"text":"Hello world"}}',
+        '{"type":"content_block_stop"}',
+        '',
+      ].join('\n');
 
       vi.mocked(spawn)
         .mockImplementationOnce(() => createMockProcess(0) as any)                     // --version
-        .mockImplementationOnce(() => createMockProcess(0, discoveryOutput + '\n' + streamOutput) as any); // discovery
+        .mockImplementationOnce(() => createMockProcess(0, streamOutput, '', { rawStreamJson: true }) as any); // discovery
 
       await ralph({ ...defaultOptions, verbose: true });
 
@@ -674,13 +736,17 @@ ALL_COMPLETE
     });
 
     it('should add blank line between content blocks in verbose mode', async () => {
-      const streamOutput = '{"type":"content_block_delta","delta":{"text":"First block"}}\n{"type":"content_block_stop"}\n{"type":"content_block_delta","delta":{"text":"Second block"}}\n{"type":"content_block_stop"}\n';
-
-      const discoveryOutput = `<ralph-discovery>\nALL_COMPLETE\n</ralph-discovery>`;
+      const streamOutput = [
+        '{"type":"content_block_delta","delta":{"text":"<ralph-discovery>\\nALL_COMPLETE\\n</ralph-discovery>"}}',
+        '{"type":"content_block_stop"}',
+        '{"type":"content_block_delta","delta":{"text":"Second block"}}',
+        '{"type":"content_block_stop"}',
+        '',
+      ].join('\n');
 
       vi.mocked(spawn)
         .mockImplementationOnce(() => createMockProcess(0) as any)                     // --version
-        .mockImplementationOnce(() => createMockProcess(0, discoveryOutput + '\n' + streamOutput) as any); // discovery
+        .mockImplementationOnce(() => createMockProcess(0, streamOutput, '', { rawStreamJson: true }) as any); // discovery
 
       await ralph({ ...defaultOptions, verbose: true });
 
@@ -692,18 +758,16 @@ ALL_COMPLETE
 
     it('should reset timestamp flag after each content block stop', async () => {
       const streamOutput = [
-        '{"type":"content_block_delta","delta":{"text":"Block 1"}}',
+        '{"type":"content_block_delta","delta":{"text":"<ralph-discovery>\\nALL_COMPLETE\\n</ralph-discovery>"}}',
         '{"type":"content_block_stop"}',
         '{"type":"content_block_delta","delta":{"text":"Block 2"}}',
         '{"type":"content_block_stop"}',
         '',
       ].join('\n');
 
-      const discoveryOutput = `<ralph-discovery>\nALL_COMPLETE\n</ralph-discovery>`;
-
       vi.mocked(spawn)
         .mockImplementationOnce(() => createMockProcess(0) as any)                     // --version
-        .mockImplementationOnce(() => createMockProcess(0, discoveryOutput + '\n' + streamOutput) as any); // discovery
+        .mockImplementationOnce(() => createMockProcess(0, streamOutput, '', { rawStreamJson: true }) as any); // discovery
 
       await ralph({ ...defaultOptions, verbose: true });
 
