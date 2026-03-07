@@ -67,7 +67,8 @@ export function copyFrameworkFiles(targetDir) {
         'AGENTS.md',
         'doc-templates',
         'commands',
-        'prompts'
+        'prompts',
+        'skills'
     ];
     for (const item of frameworkItems) {
         const srcItem = join(payloadPath, item);
@@ -175,7 +176,8 @@ export function copyFrameworkFilesFrom(sourcePayloadPath, targetDir) {
         'AGENTS.md',
         'doc-templates',
         'commands',
-        'prompts'
+        'prompts',
+        'skills'
     ];
     for (const item of frameworkItems) {
         const srcItem = join(sourcePayloadPath, item);

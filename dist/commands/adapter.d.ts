@@ -6,6 +6,20 @@ export declare function copyCommandsWithConflictHandling(sourceDir: string, dest
     skipped: string[];
 }>;
 /**
+ * Copy skill files to a destination directory with conflict handling
+ */
+export declare function copySkillsWithConflictHandling(sourceDir: string, destDir: string, skipPrompts?: boolean): Promise<{
+    copied: string[];
+    skipped: string[];
+}>;
+/**
+ * Setup skills for a given adapter directory
+ */
+export declare function setupSkills(cwd: string, sourceSkillsDir: string, adapterSkillsDir: string, skipPrompts?: boolean): Promise<{
+    copied: string[];
+    skipped: string[];
+}>;
+/**
  * Setup Cursor-specific directories and commands
  */
 export declare function setupCursorCommands(cwd: string, sourceCommandsDir: string, skipPrompts?: boolean): Promise<{

@@ -141,6 +141,68 @@ async function promptForConflict(filename, showBatchOptions) {
     return action;
 }
 /**
+ * Copy skill files to a destination directory with conflict handling
+ */
+export async function copySkillsWithConflictHandling(sourceDir, destDir, skipPrompts = false) {
+    const copied = [];
+    const skipped = [];
+    if (!existsSync(sourceDir)) {
+        return { copied, skipped };
+    }
+    const files = readdirSync(sourceDir).filter(f => f.endsWith('.md'));
+    let batchAction = null;
+    for (const file of files) {
+        const srcPath = join(sourceDir, file);
+        const destPath = join(destDir, file);
+        if (existsSync(destPath)) {
+            if (skipPrompts) {
+                cpSync(srcPath, destPath);
+                copied.push(file);
+                continue;
+            }
+            if (batchAction === 'replace_all') {
+                cpSync(srcPath, destPath);
+                copied.push(file);
+                continue;
+            }
+            else if (batchAction === 'skip_all') {
+                skipped.push(file);
+                continue;
+            }
+            const action = await promptForConflict(file, files.length > 1);
+            if (action === 'replace_all') {
+                batchAction = 'replace_all';
+                cpSync(srcPath, destPath);
+                copied.push(file);
+            }
+            else if (action === 'skip_all') {
+                batchAction = 'skip_all';
+                skipped.push(file);
+            }
+            else if (action === 'replace') {
+                cpSync(srcPath, destPath);
+                copied.push(file);
+            }
+            else {
+                skipped.push(file);
+            }
+        }
+        else {
+            cpSync(srcPath, destPath);
+            copied.push(file);
+        }
+    }
+    return { copied, skipped };
+}
+/**
+ * Setup skills for a given adapter directory
+ */
+export async function setupSkills(cwd, sourceSkillsDir, adapterSkillsDir, skipPrompts = false) {
+    ensureDir(join(cwd, adapterSkillsDir.split('/')[0])); // e.g., .claude
+    ensureDir(join(cwd, adapterSkillsDir));
+    return copySkillsWithConflictHandling(sourceSkillsDir, join(cwd, adapterSkillsDir), skipPrompts);
+}
+/**
  * Setup Cursor-specific directories and commands
  */
 export async function setupCursorCommands(cwd, sourceCommandsDir, skipPrompts = false) {
@@ -240,8 +302,10 @@ export async function adapter(args) {
 }
 export async function generateAdapters(adapterNames, sourceCommandsDir, interactive = true) {
     const cwd = process.cwd();
+    const flightRulesDir = getFlightRulesDir(cwd);
     // Default to .flight-rules/commands if no source specified
-    const commandsDir = sourceCommandsDir ?? join(getFlightRulesDir(cwd), 'commands');
+    const commandsDir = sourceCommandsDir ?? join(flightRulesDir, 'commands');
+    const skillsDir = join(flightRulesDir, 'skills');
     for (const name of adapterNames) {
         const config = ADAPTERS[name];
         if (!config)
@@ -278,7 +342,7 @@ export async function generateAdapters(adapterNames, sourceCommandsDir, interact
             p.log.success(`Created ${pc.cyan(config.filename)} for ${config.name}`);
             adapterFileWritten = true;
         }
-        // For Cursor, also set up .cursor/commands/
+        // For Cursor, also set up .cursor/commands/ and .cursor/skills/
         if (name === 'cursor') {
             const skipPrompts = !interactive;
             const commandsDirExists = isCursorAdapterInstalled(cwd);
@@ -290,8 +354,18 @@ export async function generateAdapters(adapterNames, sourceCommandsDir, interact
             if (result.skipped.length > 0) {
                 p.log.info(`Skipped ${result.skipped.length} existing command(s) in .cursor/commands/`);
             }
+            // Copy skills
+            if (existsSync(skillsDir)) {
+                const skillResult = await setupSkills(cwd, skillsDir, '.cursor/skills', skipPrompts);
+                if (skillResult.copied.length > 0) {
+                    p.log.success(`${commandsDirExists ? 'Updated' : 'Created'} ${pc.cyan('.cursor/skills/')} with ${skillResult.copied.length} skill(s)`);
+                }
+                if (skillResult.skipped.length > 0) {
+                    p.log.info(`Skipped ${skillResult.skipped.length} existing skill(s) in .cursor/skills/`);
+                }
+            }
         }
-        // For Claude, also set up .claude/commands/
+        // For Claude, also set up .claude/commands/ and .claude/skills/
         if (name === 'claude') {
             const skipPrompts = !interactive;
             const commandsDirExists = isClaudeAdapterInstalled(cwd);
@@ -302,6 +376,16 @@ export async function generateAdapters(adapterNames, sourceCommandsDir, interact
             }
             if (result.skipped.length > 0) {
                 p.log.info(`Skipped ${result.skipped.length} existing command(s) in .claude/commands/`);
+            }
+            // Copy skills
+            if (existsSync(skillsDir)) {
+                const skillResult = await setupSkills(cwd, skillsDir, '.claude/skills', skipPrompts);
+                if (skillResult.copied.length > 0) {
+                    p.log.success(`${commandsDirExists ? 'Updated' : 'Created'} ${pc.cyan('.claude/skills/')} with ${skillResult.copied.length} skill(s)`);
+                }
+                if (skillResult.skipped.length > 0) {
+                    p.log.info(`Skipped ${skillResult.skipped.length} existing skill(s) in .claude/skills/`);
+                }
             }
         }
     }

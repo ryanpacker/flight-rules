@@ -213,16 +213,17 @@ describe('files.ts utilities', () => {
       copyFrameworkFiles('/target/project');
       
       // Should copy each framework item from payload path
-      expect(cpSync).toHaveBeenCalledTimes(4);
-      
+      expect(cpSync).toHaveBeenCalledTimes(5);
+
       // Verify the destination paths
       const calls = vi.mocked(cpSync).mock.calls;
       const destPaths = calls.map(call => call[1]);
-      
+
       expect(destPaths).toContain('/target/project/.flight-rules/AGENTS.md');
       expect(destPaths).toContain('/target/project/.flight-rules/doc-templates');
       expect(destPaths).toContain('/target/project/.flight-rules/commands');
       expect(destPaths).toContain('/target/project/.flight-rules/prompts');
+      expect(destPaths).toContain('/target/project/.flight-rules/skills');
     });
 
     it('should skip items that do not exist in payload', () => {

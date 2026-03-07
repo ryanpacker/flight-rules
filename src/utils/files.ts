@@ -78,13 +78,14 @@ export function copyFrameworkFiles(targetDir: string): void {
     'AGENTS.md',
     'doc-templates',
     'commands',
-    'prompts'
+    'prompts',
+    'skills'
   ];
-  
+
   for (const item of frameworkItems) {
     const srcItem = join(payloadPath, item);
     const destItem = join(destPath, item);
-    
+
     if (existsSync(srcItem)) {
       cpSync(srcItem, destItem, { recursive: true });
     }
@@ -211,13 +212,14 @@ export function copyFrameworkFilesFrom(sourcePayloadPath: string, targetDir: str
     'AGENTS.md',
     'doc-templates',
     'commands',
-    'prompts'
+    'prompts',
+    'skills'
   ];
-  
+
   for (const item of frameworkItems) {
     const srcItem = join(sourcePayloadPath, item);
     const destItem = join(destPath, item);
-    
+
     if (existsSync(srcItem)) {
       cpSync(srcItem, destItem, { recursive: true });
     }

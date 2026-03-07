@@ -17,6 +17,7 @@ import {
   isClaudeAdapterInstalled,
   setupCursorCommands,
   setupClaudeCommands,
+  setupSkills,
 } from './adapter.js';
 
 const DOC_FILES = [
@@ -185,22 +186,37 @@ export async function upgrade(version?: string) {
     
     try {
       const sourceCommandsDir = join(fetched.payloadPath, 'commands');
-      
-      // Upgrade Cursor commands if installed
+      const sourceSkillsDir = join(fetched.payloadPath, 'skills');
+
+      // Upgrade Cursor commands and skills if installed
       if (cursorAdapterInstalled) {
         const result = await setupCursorCommands(cwd, sourceCommandsDir, true); // skipPrompts = true for upgrade
         if (result.copied.length > 0) {
           p.log.success(`Updated ${result.copied.length} command(s) in .cursor/commands/`);
         }
+
+        if (existsSync(sourceSkillsDir)) {
+          const skillResult = await setupSkills(cwd, sourceSkillsDir, '.cursor/skills', true);
+          if (skillResult.copied.length > 0) {
+            p.log.success(`Updated ${skillResult.copied.length} skill(s) in .cursor/skills/`);
+          }
+        }
       }
 
-      // Upgrade Claude commands if installed, or create them if CLAUDE.md exists but .claude/commands/ doesn't
-      // (handles upgrade from pre-0.5.4 where Claude didn't have native commands)
+      // Upgrade Claude commands and skills if installed
       if (claudeAdapterInstalled || claudeMdExists) {
         const result = await setupClaudeCommands(cwd, sourceCommandsDir, true); // skipPrompts = true for upgrade
         if (result.copied.length > 0) {
           const action = claudeAdapterInstalled ? 'Updated' : 'Created';
           p.log.success(`${action} ${result.copied.length} command(s) in .claude/commands/`);
+        }
+
+        if (existsSync(sourceSkillsDir)) {
+          const skillResult = await setupSkills(cwd, sourceSkillsDir, '.claude/skills', true);
+          if (skillResult.copied.length > 0) {
+            const action = claudeAdapterInstalled ? 'Updated' : 'Created';
+            p.log.success(`${action} ${skillResult.copied.length} skill(s) in .claude/skills/`);
+          }
         }
       }
       
