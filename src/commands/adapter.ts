@@ -180,7 +180,10 @@ async function promptForConflict(filename: string, showBatchOptions: boolean): P
 }
 
 /**
- * Copy skill files to a destination directory with conflict handling
+ * Copy skill files to a destination directory with conflict handling.
+ * Source skills are flat .md files (e.g., web-prototype.md).
+ * They are deployed as directories containing SKILL.md (e.g., web-prototype/SKILL.md),
+ * which is the format Claude Code expects.
  */
 export async function copySkillsWithConflictHandling(
   sourceDir: string,
@@ -198,43 +201,46 @@ export async function copySkillsWithConflictHandling(
   let batchAction: 'replace_all' | 'skip_all' | null = null;
 
   for (const file of files) {
+    const skillName = file.replace(/\.md$/, '');
     const srcPath = join(sourceDir, file);
-    const destPath = join(destDir, file);
+    const destSkillDir = join(destDir, skillName);
+    const destPath = join(destSkillDir, 'SKILL.md');
 
     if (existsSync(destPath)) {
       if (skipPrompts) {
         cpSync(srcPath, destPath);
-        copied.push(file);
+        copied.push(skillName);
         continue;
       }
 
       if (batchAction === 'replace_all') {
         cpSync(srcPath, destPath);
-        copied.push(file);
+        copied.push(skillName);
         continue;
       } else if (batchAction === 'skip_all') {
-        skipped.push(file);
+        skipped.push(skillName);
         continue;
       }
 
-      const action = await promptForConflict(file, files.length > 1);
+      const action = await promptForConflict(skillName, files.length > 1);
 
       if (action === 'replace_all') {
         batchAction = 'replace_all';
         cpSync(srcPath, destPath);
-        copied.push(file);
+        copied.push(skillName);
       } else if (action === 'skip_all') {
         batchAction = 'skip_all';
-        skipped.push(file);
+        skipped.push(skillName);
       } else if (action === 'replace') {
         cpSync(srcPath, destPath);
-        copied.push(file);
+        copied.push(skillName);
       } else {
-        skipped.push(file);
+        skipped.push(skillName);
       }
     } else {
+      ensureDir(destSkillDir);
       cpSync(srcPath, destPath);
-      copied.push(file);
+      copied.push(skillName);
     }
   }
 

@@ -6,7 +6,10 @@ export declare function copyCommandsWithConflictHandling(sourceDir: string, dest
     skipped: string[];
 }>;
 /**
- * Copy skill files to a destination directory with conflict handling
+ * Copy skill files to a destination directory with conflict handling.
+ * Source skills are flat .md files (e.g., web-prototype.md).
+ * They are deployed as directories containing SKILL.md (e.g., web-prototype/SKILL.md),
+ * which is the format Claude Code expects.
  */
 export declare function copySkillsWithConflictHandling(sourceDir: string, destDir: string, skipPrompts?: boolean): Promise<{
     copied: string[];
