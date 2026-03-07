@@ -1,6 +1,6 @@
 import * as p from '@clack/prompts';
 import pc from 'picocolors';
-import { writeFileSync, existsSync, readdirSync, cpSync } from 'fs';
+import { writeFileSync, existsSync, readdirSync, cpSync, statSync } from 'fs';
 import { join } from 'path';
 import { ensureDir, getFlightRulesDir } from '../utils/files.js';
 import { isInteractive } from '../utils/interactive.js';
@@ -180,10 +180,10 @@ async function promptForConflict(filename: string, showBatchOptions: boolean): P
 }
 
 /**
- * Copy skill files to a destination directory with conflict handling.
- * Source skills are flat .md files (e.g., web-prototype.md).
- * They are deployed as directories containing SKILL.md (e.g., web-prototype/SKILL.md),
- * which is the format Claude Code expects.
+ * Copy skill directories to a destination directory with conflict handling.
+ * Source skills are directories containing SKILL.md (e.g., web-prototype/SKILL.md).
+ * The entire directory is copied recursively, preserving any bundled resources
+ * (scripts/, references/, assets/, etc.).
  */
 export async function copySkillsWithConflictHandling(
   sourceDir: string,
@@ -197,24 +197,26 @@ export async function copySkillsWithConflictHandling(
     return { copied, skipped };
   }
 
-  const files = readdirSync(sourceDir).filter(f => f.endsWith('.md'));
+  const entries = readdirSync(sourceDir).filter(entry => {
+    const entryPath = join(sourceDir, entry);
+    return statSync(entryPath).isDirectory() && existsSync(join(entryPath, 'SKILL.md'));
+  });
+
   let batchAction: 'replace_all' | 'skip_all' | null = null;
 
-  for (const file of files) {
-    const skillName = file.replace(/\.md$/, '');
-    const srcPath = join(sourceDir, file);
+  for (const skillName of entries) {
+    const srcSkillDir = join(sourceDir, skillName);
     const destSkillDir = join(destDir, skillName);
-    const destPath = join(destSkillDir, 'SKILL.md');
 
-    if (existsSync(destPath)) {
+    if (existsSync(destSkillDir)) {
       if (skipPrompts) {
-        cpSync(srcPath, destPath);
+        cpSync(srcSkillDir, destSkillDir, { recursive: true });
         copied.push(skillName);
         continue;
       }
 
       if (batchAction === 'replace_all') {
-        cpSync(srcPath, destPath);
+        cpSync(srcSkillDir, destSkillDir, { recursive: true });
         copied.push(skillName);
         continue;
       } else if (batchAction === 'skip_all') {
@@ -222,24 +224,23 @@ export async function copySkillsWithConflictHandling(
         continue;
       }
 
-      const action = await promptForConflict(skillName, files.length > 1);
+      const action = await promptForConflict(skillName, entries.length > 1);
 
       if (action === 'replace_all') {
         batchAction = 'replace_all';
-        cpSync(srcPath, destPath);
+        cpSync(srcSkillDir, destSkillDir, { recursive: true });
         copied.push(skillName);
       } else if (action === 'skip_all') {
         batchAction = 'skip_all';
         skipped.push(skillName);
       } else if (action === 'replace') {
-        cpSync(srcPath, destPath);
+        cpSync(srcSkillDir, destSkillDir, { recursive: true });
         copied.push(skillName);
       } else {
         skipped.push(skillName);
       }
     } else {
-      ensureDir(destSkillDir);
-      cpSync(srcPath, destPath);
+      cpSync(srcSkillDir, destSkillDir, { recursive: true });
       copied.push(skillName);
     }
   }
