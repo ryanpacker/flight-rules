@@ -14,6 +14,7 @@ Prompt-based commands that AI agents execute to follow Flight Rules workflows.
 - Commands are Markdown files containing prompts, not executable code
 - Agents read and follow the instructions in these files
 - All commands live in `payload/commands/` and get copied to `.flight-rules/commands/`
+- Codex also gets repo-local skills in `.agents/skills/` that point back to `.flight-rules/commands/`
 - Claude Code also gets copies in `.claude/commands/` for slash command access
 
 ## Task Groups

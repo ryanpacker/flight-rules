@@ -56,8 +56,30 @@ vi.mock('../../src/utils/files.js', () => ({
 
 // Mock adapter.js
 vi.mock('../../src/commands/adapter.js', () => ({
+  ADAPTERS: {
+    codex: {
+      name: 'Codex',
+      filename: 'AGENTS.md',
+      template: 'shared-agents',
+      nativeSourceDirectory: 'skills/codex',
+      nativeTargetDirectory: '.agents/skills',
+    },
+    claude: {
+      name: 'Claude Code',
+      filename: 'CLAUDE.md',
+      template: 'claude',
+      commandsDirectory: '.claude/commands',
+    },
+  },
+  generateAdapterContent: vi.fn((config: { filename: string }) =>
+    config.filename === 'AGENTS.md'
+      ? '# Flight Rules – AGENTS Adapter\n\nCodex and Cursor compatibility.'
+      : '# Flight Rules – Claude Code Adapter\n\n.claude/commands/'
+  ),
+  isCodexAdapterInstalled: vi.fn(),
   isCursorAdapterInstalled: vi.fn(),
   isClaudeAdapterInstalled: vi.fn(),
+  setupCodexSkills: vi.fn(),
   setupCursorCommands: vi.fn(),
   setupClaudeCommands: vi.fn(),
 }));
@@ -79,7 +101,14 @@ import {
   getCliVersion,
 } from '../../src/utils/files.js';
 import { isInteractive } from '../../src/utils/interactive.js';
-import { isCursorAdapterInstalled, isClaudeAdapterInstalled, setupCursorCommands, setupClaudeCommands } from '../../src/commands/adapter.js';
+import {
+  isCodexAdapterInstalled,
+  isCursorAdapterInstalled,
+  isClaudeAdapterInstalled,
+  setupCodexSkills,
+  setupCursorCommands,
+  setupClaudeCommands,
+} from '../../src/commands/adapter.js';
 import { upgrade } from '../../src/commands/upgrade.js';
 
 describe('upgrade.ts', () => {
@@ -95,6 +124,7 @@ describe('upgrade.ts', () => {
     vi.mocked(isFlightRulesInstalled).mockReturnValue(true);
     
     // Default: no adapters installed
+    vi.mocked(isCodexAdapterInstalled).mockReturnValue(false);
     vi.mocked(isCursorAdapterInstalled).mockReturnValue(false);
     vi.mocked(isClaudeAdapterInstalled).mockReturnValue(false);
     vi.mocked(existsSync).mockReturnValue(false);
@@ -113,6 +143,7 @@ describe('upgrade.ts', () => {
     vi.mocked(p.isCancel).mockReturnValue(false);
     
     // Default: setup commands succeeds
+    vi.mocked(setupCodexSkills).mockResolvedValue({ copied: [], skipped: [] });
     vi.mocked(setupCursorCommands).mockResolvedValue({ copied: [], skipped: [] });
     vi.mocked(setupClaudeCommands).mockResolvedValue({ copied: [], skipped: [] });
     
@@ -140,6 +171,14 @@ describe('upgrade.ts', () => {
   });
 
   describe('adapter detection', () => {
+    it('should detect Codex adapter when .agents/skills exists', async () => {
+      vi.mocked(isCodexAdapterInstalled).mockReturnValue(true);
+
+      await upgrade();
+
+      expect(p.log.info).toHaveBeenCalledWith(expect.stringContaining('Installed adapters'));
+    });
+
     it('should detect Cursor adapter when .cursor/commands exists', async () => {
       vi.mocked(isCursorAdapterInstalled).mockReturnValue(true);
 
@@ -300,6 +339,23 @@ describe('upgrade.ts', () => {
   });
 
   describe('adapter upgrades', () => {
+    it('should upgrade Codex skills when installed', async () => {
+      vi.mocked(isCodexAdapterInstalled).mockReturnValue(true);
+      vi.mocked(setupCodexSkills).mockResolvedValue({
+        copied: ['flight-rules-sessions'],
+        skipped: []
+      });
+
+      await upgrade();
+
+      expect(setupCodexSkills).toHaveBeenCalledWith(
+        mockCwd,
+        join(mockPayloadPath, 'skills', 'codex'),
+        true
+      );
+      expect(p.log.success).toHaveBeenCalledWith(expect.stringContaining('Updated 1 skill'));
+    });
+
     it('should upgrade Cursor commands when installed', async () => {
       vi.mocked(isCursorAdapterInstalled).mockReturnValue(true);
       vi.mocked(setupCursorCommands).mockResolvedValue({
@@ -355,7 +411,7 @@ describe('upgrade.ts', () => {
       
       expect(writeFileSync).toHaveBeenCalledWith(
         join(mockCwd, 'AGENTS.md'),
-        expect.stringContaining('Flight Rules – Cursor Adapter'),
+        expect.stringContaining('Flight Rules – AGENTS Adapter'),
         'utf-8'
       );
     });
@@ -412,6 +468,14 @@ describe('upgrade.ts', () => {
       vi.mocked(setupClaudeCommands).mockRejectedValue(new Error('Claude command copy failed'));
 
       await expect(upgrade()).rejects.toThrow('Claude command copy failed');
+      expect(mockCleanup).toHaveBeenCalled();
+    });
+
+    it('should cleanup and rethrow on Codex adapter upgrade failure', async () => {
+      vi.mocked(isCodexAdapterInstalled).mockReturnValue(true);
+      vi.mocked(setupCodexSkills).mockRejectedValue(new Error('Codex skill copy failed'));
+
+      await expect(upgrade()).rejects.toThrow('Codex skill copy failed');
       expect(mockCleanup).toHaveBeenCalled();
     });
   });
@@ -533,4 +597,3 @@ describe('upgrade.ts', () => {
     });
   });
 });
-

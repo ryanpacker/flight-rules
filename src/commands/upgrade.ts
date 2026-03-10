@@ -1,6 +1,6 @@
 import * as p from '@clack/prompts';
 import pc from 'picocolors';
-import { existsSync, cpSync } from 'fs';
+import { existsSync, cpSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { 
   isFlightRulesInstalled, 
@@ -13,8 +13,12 @@ import {
 } from '../utils/files.js';
 import { isInteractive } from '../utils/interactive.js';
 import {
+  ADAPTERS,
+  generateAdapterContent,
+  isCodexAdapterInstalled,
   isCursorAdapterInstalled,
   isClaudeAdapterInstalled,
+  setupCodexSkills,
   setupCursorCommands,
   setupClaudeCommands,
   setupSkills,
@@ -70,6 +74,7 @@ export async function upgrade(version?: string) {
   const currentVersion = getInstalledVersion(cwd);
   
   // Detect installed adapters before upgrade
+  const codexAdapterInstalled = isCodexAdapterInstalled(cwd);
   const cursorAdapterInstalled = isCursorAdapterInstalled(cwd);
   const claudeAdapterInstalled = isClaudeAdapterInstalled(cwd);
   const agentsMdExists = existsSync(join(cwd, 'AGENTS.md'));
@@ -77,11 +82,14 @@ export async function upgrade(version?: string) {
   
   // Show what will be upgraded
   p.log.info(`${pc.bold('The .flight-rules/ directory will be upgraded.')}`);
-  p.log.message('  Framework files (AGENTS.md, doc-templates/, commands/, prompts/) will be replaced.');
+  p.log.message('  Framework files (AGENTS.md, doc-templates/, commands/, prompts/, skills/) will be replaced.');
   console.log();
   
   // Show adapter upgrade info
   const adaptersToUpgrade: string[] = [];
+  if (codexAdapterInstalled) {
+    adaptersToUpgrade.push('Codex (.agents/skills/)');
+  }
   if (cursorAdapterInstalled) {
     adaptersToUpgrade.push('Cursor (.cursor/commands/)');
   }
@@ -187,6 +195,14 @@ export async function upgrade(version?: string) {
     try {
       const sourceCommandsDir = join(fetched.payloadPath, 'commands');
       const sourceSkillsDir = join(fetched.payloadPath, 'skills');
+      const sourceCodexSkillsDir = join(fetched.payloadPath, 'skills', 'codex');
+
+      if (codexAdapterInstalled) {
+        const result = await setupCodexSkills(cwd, sourceCodexSkillsDir, true);
+        if (result.copied.length > 0) {
+          p.log.success(`Updated ${result.copied.length} skill(s) in .agents/skills/`);
+        }
+      }
 
       // Upgrade Cursor commands and skills if installed
       if (cursorAdapterInstalled) {
@@ -221,18 +237,17 @@ export async function upgrade(version?: string) {
       }
       
       // Regenerate adapter files
-      const adaptersToRegenerate: string[] = [];
+      const adapterFilesToRegenerate = new Set<'AGENTS.md' | 'CLAUDE.md'>();
       if (agentsMdExists) {
-        adaptersToRegenerate.push('cursor');
+        adapterFilesToRegenerate.add('AGENTS.md');
       }
       if (claudeMdExists) {
-        adaptersToRegenerate.push('claude');
+        adapterFilesToRegenerate.add('CLAUDE.md');
       }
       
-      if (adaptersToRegenerate.length > 0) {
-        // For upgrade, we regenerate silently (the files already exist, so we just overwrite)
-        for (const adapterName of adaptersToRegenerate) {
-          await regenerateAdapterFile(cwd, adapterName, sourceCommandsDir);
+      if (adapterFilesToRegenerate.size > 0) {
+        for (const filename of adapterFilesToRegenerate) {
+          regenerateAdapterFile(cwd, filename);
         }
       }
       
@@ -252,70 +267,9 @@ export async function upgrade(version?: string) {
 /**
  * Regenerate a single adapter file during upgrade (no prompts, just overwrite)
  */
-async function regenerateAdapterFile(cwd: string, adapterName: string, _sourceCommandsDir: string): Promise<void> {
-  // Import the adapter config and content generator
-  const { writeFileSync } = await import('fs');
-  const { join } = await import('path');
-  
-  const ADAPTERS: Record<string, { filename: string; title: string; description: string; hasNativeCommands: boolean; commandsDirectory?: string }> = {
-    cursor: {
-      filename: 'AGENTS.md',
-      title: 'Flight Rules – Cursor Adapter',
-      description: 'This file is placed at the project root as `AGENTS.md` for Cursor compatibility.',
-      hasNativeCommands: true,
-      commandsDirectory: '.cursor/commands',
-    },
-    claude: {
-      filename: 'CLAUDE.md',
-      title: 'Flight Rules – Claude Code Adapter',
-      description: 'This file is placed at the project root as `CLAUDE.md` for Claude Code compatibility.',
-      hasNativeCommands: true,
-      commandsDirectory: '.claude/commands',
-    },
-  };
-  
-  const config = ADAPTERS[adapterName];
-  if (!config) return;
-
-  const commandLocation = config.hasNativeCommands && config.commandsDirectory
-    ? `\`${config.commandsDirectory}/\` (as slash commands)`
-    : `\`.flight-rules/commands/\``;
-  
-  const commandInstructions = config.hasNativeCommands
-    ? `Use the \`/dev-session.start\` and \`/dev-session.end\` slash commands.`
-    : `When the user says "start coding session" or "end coding session", follow the instructions in \`.flight-rules/commands/\`.`;
-
-  const content = `# ${config.title}
-
-${config.description}
-
----
-
-**This project uses Flight Rules.**
-
-Agent guidelines and workflows live in \`.flight-rules/\`. Project documentation lives in \`docs/\`.
-
-## Quick Reference
-
-| What | Where |
-|------|-------|
-| Agent Guidelines | \`.flight-rules/AGENTS.md\` |
-| PRD | \`docs/prd.md\` |
-| Implementation Specs | \`docs/implementation/\` |
-| Progress Log | \`docs/progress.md\` |
-| Session Commands | ${commandLocation} |
-
-## For Agents
-
-Please read \`.flight-rules/AGENTS.md\` for complete guidelines on:
-- Project structure
-- Implementation specs
-- Coding sessions
-- How to work with this system
-
-${commandInstructions}
-`;
-  
-  const filePath = join(cwd, config.filename);
+function regenerateAdapterFile(cwd: string, filename: 'AGENTS.md' | 'CLAUDE.md'): void {
+  const config = filename === 'AGENTS.md' ? ADAPTERS.codex : ADAPTERS.claude;
+  const content = generateAdapterContent(config);
+  const filePath = join(cwd, filename);
   writeFileSync(filePath, content, 'utf-8');
 }

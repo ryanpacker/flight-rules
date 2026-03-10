@@ -2,7 +2,7 @@
 
 flight_rules_version: 0.15.4
 
-This file defines how agents (Claude Code, Cursor, etc.) should work on software projects using the Flight Rules system.
+This file defines how agents (Codex, Claude Code, Cursor, etc.) should work on software projects using the Flight Rules system.
 
 It explains:
 - How project docs are structured
@@ -44,6 +44,7 @@ The `.flight-rules/` directory contains Flight Rules framework files. These can 
 - `.flight-rules/doc-templates/` – Templates for creating project docs
 - `.flight-rules/commands/` – Workflow command files (start/end coding session)
 - `.flight-rules/prompts/` – Reusable prompt templates
+- `.flight-rules/skills/` – Skill templates used by the Codex adapter
 
 ### `docs/` – Your project documentation
 

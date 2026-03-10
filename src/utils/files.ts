@@ -79,7 +79,7 @@ export function copyFrameworkFiles(targetDir: string): void {
     'doc-templates',
     'commands',
     'prompts',
-    'skills'
+    'skills',
   ];
 
   for (const item of frameworkItems) {
@@ -213,7 +213,7 @@ export function copyFrameworkFilesFrom(sourcePayloadPath: string, targetDir: str
     'doc-templates',
     'commands',
     'prompts',
-    'skills'
+    'skills',
   ];
 
   for (const item of frameworkItems) {
@@ -303,4 +303,3 @@ export function getInstalledVersion(targetDir: string): string | null {
     return null;
   }
 }
-

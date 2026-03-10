@@ -39,7 +39,7 @@ npx flight-rules@dev init
 The `init` command will:
 - Create a `.flight-rules/` directory with framework files
 - Optionally create a `docs/` directory with project documentation from templates
-- Optionally generate agent adapters (AGENTS.md for Cursor, CLAUDE.md for Claude Code, etc.)
+- Optionally generate agent adapters (shared `AGENTS.md` for Codex/Cursor, `CLAUDE.md` for Claude Code, and repo-local Codex skills)
 
 ---
 
@@ -93,21 +93,23 @@ Agents don't start these flows on their own; you explicitly invoke them.
 
 Flight Rules provides workflow commands that agents can execute:
 
+These workflows live in `.flight-rules/commands/`. Some adapters surface them as Cursor or Claude slash commands, and the Codex adapter also exposes them through repo-local skills.
+
 | Command | Purpose |
 |---------|---------|
-| `/dev-session.start` | Begin a structured coding session with goals and plan |
-| `/dev-session.end` | End session, summarize work, update progress |
-| `/prd.create` | Create a Product Requirements Document |
-| `/prd.clarify` | Refine specific sections of an existing PRD |
-| `/impl.outline` | Create implementation area structure |
-| `/impl.create` | Add detailed tasks to implementation specs |
-| `/feature.add` | Add a new feature to PRD and implementation docs |
-| `/test.add` | Add tests for specific functionality |
-| `/test.assess-current` | Analyze existing test coverage |
-| `/prompt.refine` | Iteratively improve a prompt |
-| `/readme.create` | Generate README from PRD and project state |
-| `/readme.reconcile` | Update README to reflect recent changes |
-| `/prd.reconcile` | Update PRD based on what was actually built |
+| `dev-session.start` | Begin a structured coding session with goals and plan |
+| `dev-session.end` | End session, summarize work, update progress |
+| `prd.create` | Create a Product Requirements Document |
+| `prd.clarify` | Refine specific sections of an existing PRD |
+| `impl.outline` | Create implementation area structure |
+| `impl.create` | Add detailed tasks to implementation specs |
+| `feature.add` | Add a new feature to PRD and implementation docs |
+| `test.add` | Add tests for specific functionality |
+| `test.assess-current` | Analyze existing test coverage |
+| `prompt.refine` | Iteratively improve a prompt |
+| `readme.create` | Generate README from PRD and project state |
+| `readme.reconcile` | Update README to reflect recent changes |
+| `prd.reconcile` | Update PRD based on what was actually built |
 | `/impl.reconcile` | Update implementation docs with status changes |
 | `/docs.reconcile` | Run all reconcile commands + consistency check |
 | `/parallel.status` | Show all active parallel sessions |
@@ -131,7 +133,8 @@ When you run `flight-rules init`, you get:
 
 ```text
 your-project/
-├── AGENTS.md                 # (Optional) Adapter for Cursor - points to .flight-rules/
+├── AGENTS.md                 # (Optional) Shared adapter for Codex/Cursor
+├── .agents/skills/           # (Optional) Repo-local Codex skills
 ├── docs/                     # YOUR content (new templates added on upgrade)
 │   ├── prd.md
 │   ├── progress.md
@@ -166,7 +169,8 @@ your-project/
     │   ├── prd.reconcile.md
     │   ├── impl.reconcile.md
     │   └── docs.reconcile.md
-    └── prompts/              # Reusable prompt templates
+    ├── prompts/              # Reusable prompt templates
+    └── skills/               # Skill templates copied by the Codex adapter
 ```
 
 ---
@@ -198,7 +202,7 @@ your-project/
 |---------|-------------|
 | `flight-rules init` | Install Flight Rules into a project (interactive setup wizard) |
 | `flight-rules upgrade` | Upgrade Flight Rules in an existing project (preserves your docs) |
-| `flight-rules adapter` | Generate agent-specific adapters (`--cursor`, `--claude`) |
+| `flight-rules adapter` | Generate agent-specific adapters (`--codex`, `--cursor`, `--claude`) |
 | `flight-rules update` | Update the Flight Rules CLI itself (`--channel` to switch dev/latest) |
 | `flight-rules ralph` | Run autonomous agent loop through task groups |
 | `flight-rules parallel` | Manage parallel dev sessions with git worktrees |
@@ -249,7 +253,9 @@ flight-rules parallel remove auth-refactor --force
 
 ### Integration with Dev Sessions
 
-The `/dev-session.start` command offers a parallel session option after establishing goals. When ending a session in a worktree, `/dev-session.end` automatically offers the merge workflow.
+The `dev-session.start` workflow offers a parallel session option after establishing goals. When ending a session in a worktree, `dev-session.end` automatically offers the merge workflow.
+
+Codex desktop users can open the new worktree as a local environment. CLI users can `cd` into the worktree and launch `codex`.
 
 ### Features
 
@@ -315,6 +321,7 @@ flight-rules ralph --verbose
 
 ### Prerequisites
 
+- Ralph is currently Claude-only.
 - Claude Code CLI installed: `npm install -g @anthropic-ai/claude-code`
 - Authenticated with Claude Code: run `claude` and follow prompts
 - Implementation specs with task groups to work through

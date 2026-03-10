@@ -137,7 +137,7 @@ describe('files.ts utilities', () => {
   });
 
   describe('copyFrameworkFilesFrom', () => {
-    it('should copy only framework items (AGENTS.md, doc-templates, commands, prompts)', () => {
+    it('should copy only framework items (AGENTS.md, doc-templates, commands, prompts, skills)', () => {
       // existsSync is called for each framework item
       vi.mocked(existsSync).mockReturnValue(true);
       
@@ -162,6 +162,11 @@ describe('files.ts utilities', () => {
       expect(cpSync).toHaveBeenCalledWith(
         '/source/payload/prompts',
         '/target/project/.flight-rules/prompts',
+        { recursive: true }
+      );
+      expect(cpSync).toHaveBeenCalledWith(
+        '/source/payload/skills',
+        '/target/project/.flight-rules/skills',
         { recursive: true }
       );
     });
@@ -214,6 +219,7 @@ describe('files.ts utilities', () => {
       
       // Should copy each framework item from payload path
       expect(cpSync).toHaveBeenCalledTimes(5);
+
 
       // Verify the destination paths
       const calls = vi.mocked(cpSync).mock.calls;
@@ -454,4 +460,3 @@ describe('files.ts utilities', () => {
     });
   });
 });
-

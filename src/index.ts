@@ -180,6 +180,7 @@ ${pc.bold('Update Options:')}
                         Defaults to current channel
 
 ${pc.bold('Adapter Options:')}
+  --codex     Generate AGENTS.md and repo-local Codex skills
   --cursor    Generate AGENTS.md for Cursor
   --claude    Generate CLAUDE.md for Claude Code
   --all       Generate all adapters
@@ -206,7 +207,7 @@ ${pc.bold('Examples:')}
   flight-rules upgrade --version 0.1.4
   flight-rules update
   flight-rules update --channel=latest
-  flight-rules adapter --cursor --claude
+  flight-rules adapter --codex --cursor --claude
   flight-rules ralph
   flight-rules ralph --max-iterations 20
   flight-rules ralph --area 2 --branch

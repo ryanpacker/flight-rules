@@ -56,7 +56,7 @@ If parallel is chosen:
 
 1. Run `flight-rules parallel create <session-name>` (derive a short kebab-case name from the goals)
 2. Note the worktree path in the session log header: `**Worktree:** <path>`
-3. Instruct the user to open a new terminal in the worktree directory and run `claude`
+3. Instruct the user to open the worktree in their preferred agent (for example Codex CLI, the Codex desktop app, Claude Code, or Cursor)
 4. The rest of the session workflow proceeds normally within the worktree
 
 **Detecting existing parallel context:** If you notice the current directory is inside a `*-sessions/` worktree (check with `git rev-parse --git-dir` — linked worktrees show `.git/worktrees/<name>`), note this in the session log and skip offering the parallel option.
@@ -68,5 +68,4 @@ Present the plan to the user and ask:
 > "The session plan has been documented in `docs/session_logs/YYYYMMDD_HHMM_session.md`. Are you ready for me to begin implementing this plan?"
 
 **Do not begin implementation until the user confirms.**
-
 

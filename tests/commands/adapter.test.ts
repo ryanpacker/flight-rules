@@ -51,10 +51,13 @@ import * as p from '@clack/prompts';
 import { existsSync, writeFileSync, readdirSync, cpSync } from 'fs';
 import { isInteractive } from '../../src/utils/interactive.js';
 import {
+  isCodexAdapterInstalled,
   isCursorAdapterInstalled,
   isClaudeAdapterInstalled,
   isAdapterInstalled,
   copyCommandsWithConflictHandling,
+  copyDirectoryEntriesWithConflictHandling,
+  setupCodexSkills,
   setupCursorCommands,
   setupClaudeCommands,
   generateAdapters,
@@ -70,6 +73,26 @@ describe('adapter.ts', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  describe('isCodexAdapterInstalled', () => {
+    it('should return true when a Flight Rules skill exists in .agents/skills/', () => {
+      vi.mocked(existsSync).mockImplementation((path) => {
+        return String(path).includes('.agents/skills/flight-rules-sessions');
+      });
+
+      const result = isCodexAdapterInstalled('/some/project');
+
+      expect(result).toBe(true);
+    });
+
+    it('should return false when Flight Rules skills do not exist', () => {
+      vi.mocked(existsSync).mockReturnValue(false);
+
+      const result = isCodexAdapterInstalled('/some/project');
+
+      expect(result).toBe(false);
+    });
   });
 
   describe('isCursorAdapterInstalled', () => {
@@ -147,6 +170,16 @@ describe('adapter.ts', () => {
       });
 
       const result = isAdapterInstalled('/project', 'claude');
+
+      expect(result).toBe(true);
+    });
+
+    it('should return true for codex if a Flight Rules skill exists', () => {
+      vi.mocked(existsSync).mockImplementation((path) => {
+        return String(path).includes('.agents/skills/flight-rules-sessions');
+      });
+
+      const result = isAdapterInstalled('/project', 'codex');
 
       expect(result).toBe(true);
     });
@@ -235,6 +268,26 @@ describe('adapter.ts', () => {
     });
   });
 
+  describe('copyDirectoryEntriesWithConflictHandling', () => {
+    it('should copy directory entries when no conflicts exist', async () => {
+      vi.mocked(existsSync).mockImplementation((path) => {
+        const pathStr = String(path);
+        if (pathStr === '/source/skills') return true;
+        return false;
+      });
+      vi.mocked(readdirSync).mockReturnValue(['flight-rules-sessions'] as unknown as ReturnType<typeof readdirSync>);
+
+      const result = await copyDirectoryEntriesWithConflictHandling('/source/skills', '/dest/skills');
+
+      expect(result.copied).toEqual(['flight-rules-sessions']);
+      expect(cpSync).toHaveBeenCalledWith(
+        '/source/skills/flight-rules-sessions',
+        '/dest/skills/flight-rules-sessions',
+        { recursive: true }
+      );
+    });
+  });
+
   describe('setupCursorCommands', () => {
     it('should create .cursor/commands directory and copy commands', async () => {
       vi.mocked(existsSync).mockImplementation((path) => {
@@ -249,6 +302,21 @@ describe('adapter.ts', () => {
       const result = await setupCursorCommands('/project', '/source/commands');
 
       expect(result.copied).toContain('dev-session.start.md');
+    });
+  });
+
+  describe('setupCodexSkills', () => {
+    it('should create .agents/skills directory and copy skills', async () => {
+      vi.mocked(existsSync).mockImplementation((path) => {
+        const pathStr = String(path);
+        if (pathStr === '/source/skills') return true;
+        return false;
+      });
+      vi.mocked(readdirSync).mockReturnValue(['flight-rules-sessions'] as unknown as ReturnType<typeof readdirSync>);
+
+      const result = await setupCodexSkills('/project', '/source/skills');
+
+      expect(result.copied).toContain('flight-rules-sessions');
     });
   });
 
@@ -278,7 +346,20 @@ describe('adapter.ts', () => {
       
       expect(writeFileSync).toHaveBeenCalledWith(
         '/mock/project/AGENTS.md',
-        expect.stringContaining('Flight Rules – Cursor Adapter'),
+        expect.stringContaining('Flight Rules – AGENTS Adapter'),
+        'utf-8'
+      );
+    });
+
+    it('should generate AGENTS.md for codex adapter', async () => {
+      vi.mocked(existsSync).mockReturnValue(false);
+      vi.mocked(readdirSync).mockReturnValue([] as unknown as ReturnType<typeof readdirSync>);
+
+      await generateAdapters(['codex']);
+
+      expect(writeFileSync).toHaveBeenCalledWith(
+        '/mock/project/AGENTS.md',
+        expect.stringContaining('Codex and Cursor compatibility'),
         'utf-8'
       );
     });
@@ -360,7 +441,7 @@ describe('adapter.ts', () => {
       vi.mocked(existsSync).mockReturnValue(false);
       vi.mocked(readdirSync).mockReturnValue([] as unknown as ReturnType<typeof readdirSync>);
       
-      await generateAdapters(['cursor', 'claude']);
+      await generateAdapters(['codex', 'cursor', 'claude']);
       
       expect(writeFileSync).toHaveBeenCalledTimes(2);
     });
@@ -434,6 +515,20 @@ describe('adapter.ts', () => {
         );
       });
 
+      it('should work with --codex flag', async () => {
+        vi.mocked(existsSync).mockReturnValue(false);
+        vi.mocked(readdirSync).mockReturnValue([] as unknown as ReturnType<typeof readdirSync>);
+
+        await adapter(['--codex']);
+
+        expect(p.multiselect).not.toHaveBeenCalled();
+        expect(writeFileSync).toHaveBeenCalledWith(
+          expect.stringContaining('AGENTS.md'),
+          expect.stringContaining('Codex and Cursor compatibility'),
+          'utf-8'
+        );
+      });
+
       it('should work with --all flag', async () => {
         vi.mocked(existsSync).mockReturnValue(false);
         vi.mocked(readdirSync).mockReturnValue([] as unknown as ReturnType<typeof readdirSync>);
@@ -441,10 +536,9 @@ describe('adapter.ts', () => {
         await adapter(['--all']);
         
         expect(p.multiselect).not.toHaveBeenCalled();
-        // Should create both adapters
+        // Shared AGENTS.md + CLAUDE.md
         expect(writeFileSync).toHaveBeenCalledTimes(2);
       });
     });
   });
 });
-

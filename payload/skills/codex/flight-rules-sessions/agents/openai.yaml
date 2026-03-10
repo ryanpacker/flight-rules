@@ -1,0 +1,3 @@
+interface:
+  display_name: "Flight Rules Sessions"
+  short_description: "Run Flight Rules start/end session workflows"

@@ -369,10 +369,10 @@ export async function parallelCreate(
   // Display navigation instructions
   console.log();
   p.log.message(pc.dim('─'.repeat(50)));
-  p.log.message(`To work in this session, open a new terminal and run:`);
+  p.log.message('To work in this session, open the worktree in your preferred agent:');
   console.log();
   p.log.message(`  ${pc.cyan(`cd ${worktreePath}`)}`);
-  p.log.message(`  ${pc.cyan('claude')}`);
+  p.log.message(`  ${pc.cyan('# then launch codex, claude, Cursor, or another agent here')}`);
   console.log();
   p.log.message(pc.dim('─'.repeat(50)));
 }

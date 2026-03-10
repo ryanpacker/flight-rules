@@ -1,0 +1,3 @@
+interface:
+  display_name: "Flight Rules Planning"
+  short_description: "Run Flight Rules planning and docs workflows"

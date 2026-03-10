@@ -374,13 +374,14 @@ describe('init.ts', () => {
       vi.mocked(p.confirm)
         .mockResolvedValueOnce(false)
         .mockResolvedValueOnce(true);
-      vi.mocked(p.multiselect).mockResolvedValueOnce(['cursor']);
+      vi.mocked(p.multiselect).mockResolvedValueOnce(['codex']);
       
       await init();
       
       expect(p.multiselect).toHaveBeenCalledWith(
         expect.objectContaining({
           message: expect.stringContaining('Which adapters'),
+          initialValues: ['codex'],
         })
       );
     });
@@ -489,7 +490,7 @@ describe('init.ts', () => {
       // Should not prompt for adapter generation
       expect(p.multiselect).not.toHaveBeenCalled();
       // Should log that adapters were skipped
-      expect(p.log.info).toHaveBeenCalledWith(expect.stringContaining('Skipping adapter'));
+      expect(p.log.info).toHaveBeenCalledWith(expect.stringContaining('--codex'));
     });
 
     it('should skip editorconfig installation without prompting', async () => {
@@ -601,4 +602,3 @@ describe('init.ts', () => {
     });
   });
 });
-

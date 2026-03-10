@@ -61,7 +61,7 @@ The core problem: when an AI agent opens a project, it lacks context about what 
 
 4. **As a team member joining a project**, I want standardized documentation so that I can onboard quickly without someone walking me through everything.
 
-5. **As a developer switching between Cursor and Claude Code**, I want agent-specific adapters so that each tool knows how to find and use the Flight Rules structure.
+5. **As a developer switching between Codex, Cursor, and Claude Code**, I want agent-specific adapters so that each tool knows how to find and use the Flight Rules structure.
 
 6. **As an AI agent or CI system**, I want Flight Rules CLI to work without interactive prompts so that I can automate installations and upgrades.
 
@@ -91,7 +91,7 @@ The core problem: when an AI agent opens a project, it lacks context about what 
 
 ## Constraints
 
-1. **Careful handling of user-owned directories** — Flight Rules operates in directories the user also owns (`docs/`, `.cursor/commands/`, and optionally `.editorconfig`). The rules:
+1. **Careful handling of user-owned directories** — Flight Rules operates in directories the user also owns (`docs/`, `.agents/skills/`, `.cursor/commands/`, `.claude/commands/`, adapter files at the project root, and optionally `.editorconfig`). The rules:
    - **Adding new files:** Common and expected (e.g., `prd.create` writes `docs/prd.md`, upgrades add new templates)
    - **Updating existing files:** Rare and requires care. Ideally, detect whether a file has been user-modified vs. left as a template. If unmodified, safe to update; if modified, notify rather than overwrite.
    - **Over-communicate:** Any changes to user-owned directories should be explicit and transparent

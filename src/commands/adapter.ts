@@ -8,46 +8,45 @@ import { isInteractive } from '../utils/interactive.js';
 interface AdapterConfig {
   name: string;
   filename: string;
-  title: string;
-  description: string;
-  /** Whether this adapter uses native commands (like Cursor's .cursor/commands/) */
-  hasNativeCommands: boolean;
+  template: 'shared-agents' | 'claude';
   /** Directory for native commands (e.g., '.cursor/commands' or '.claude/commands') */
   commandsDirectory?: string;
+  /** Destination directory in the project root for native skills/templates */
+  nativeTargetDirectory?: string;
 }
 
-const ADAPTERS: Record<string, AdapterConfig> = {
+const CODEX_SKILL_DIRECTORIES = [
+  'flight-rules-sessions',
+  'flight-rules-planning-docs',
+  'flight-rules-parallel',
+];
+
+export const ADAPTERS: Record<string, AdapterConfig> = {
+  codex: {
+    name: 'Codex',
+    filename: 'AGENTS.md',
+    template: 'shared-agents',
+    nativeTargetDirectory: '.agents/skills',
+  },
   cursor: {
     name: 'Cursor',
     filename: 'AGENTS.md',
-    title: 'Flight Rules – Cursor Adapter',
-    description: 'This file is placed at the project root as `AGENTS.md` for Cursor compatibility.',
-    hasNativeCommands: true,
+    template: 'shared-agents',
     commandsDirectory: '.cursor/commands',
   },
   claude: {
     name: 'Claude Code',
     filename: 'CLAUDE.md',
-    title: 'Flight Rules – Claude Code Adapter',
-    description: 'This file is placed at the project root as `CLAUDE.md` for Claude Code compatibility.',
-    hasNativeCommands: true,
+    template: 'claude',
     commandsDirectory: '.claude/commands',
   },
 };
 
-function generateAdapterContent(config: AdapterConfig): string {
-  // Adapter-specific command instructions
-  const commandLocation = config.hasNativeCommands && config.commandsDirectory
-    ? `\`${config.commandsDirectory}/\` (as slash commands)`
-    : `\`.flight-rules/commands/\``;
+export function generateAdapterContent(config: AdapterConfig): string {
+  if (config.template === 'shared-agents') {
+    return `# Flight Rules – AGENTS Adapter
 
-  const commandInstructions = config.hasNativeCommands
-    ? `Use the \`/dev-session.start\` and \`/dev-session.end\` slash commands.`
-    : `When the user says "start coding session" or "end coding session", follow the instructions in \`.flight-rules/commands/\`.`;
-
-  return `# ${config.title}
-
-${config.description}
+This file is placed at the project root as \`AGENTS.md\` for Codex and Cursor compatibility.
 
 ---
 
@@ -64,7 +63,9 @@ Agent guidelines and workflows live in \`.flight-rules/\`. Project documentation
 | Implementation Specs | \`docs/implementation/\` |
 | Progress Log | \`docs/progress.md\` |
 | Tech Stack | \`docs/tech-stack.md\` |
-| Session Commands | ${commandLocation} |
+| Workflow Commands | \`.flight-rules/commands/\` |
+| Cursor Slash Commands | \`.cursor/commands/\` (if installed) |
+| Codex Skills | \`.agents/skills/\` (if installed) |
 
 ## For Agents
 
@@ -74,7 +75,44 @@ Please read \`.flight-rules/AGENTS.md\` for complete guidelines on:
 - Coding sessions
 - How to work with this system
 
-${commandInstructions}
+\`.flight-rules/commands/\` is the source of truth for Flight Rules workflows.
+If Cursor slash commands are installed, you can use the mirrored command files in \`.cursor/commands/\`.
+If Codex skills are installed, use the matching Flight Rules skill in \`.agents/skills/\`.
+When the user asks to "start coding session" or "end coding session", follow the corresponding workflow in \`.flight-rules/commands/\`.
+`;
+  }
+
+  return `# Flight Rules – Claude Code Adapter
+
+This file is placed at the project root as \`CLAUDE.md\` for Claude Code compatibility.
+
+---
+
+**This project uses Flight Rules.**
+
+Agent guidelines and workflows live in \`.flight-rules/\`. Project documentation lives in \`docs/\`.
+
+## Quick Reference
+
+| What | Where |
+|------|-------|
+| Agent Guidelines | \`.flight-rules/AGENTS.md\` |
+| PRD | \`docs/prd.md\` |
+| Implementation Specs | \`docs/implementation/\` |
+| Progress Log | \`docs/progress.md\` |
+| Tech Stack | \`docs/tech-stack.md\` |
+| Session Commands | \`${config.commandsDirectory}/\` (as slash commands) |
+
+## For Agents
+
+Please read \`.flight-rules/AGENTS.md\` for complete guidelines on:
+- Project structure
+- Implementation specs
+- Coding sessions
+- How to work with this system
+
+Use the \`/dev-session.start\` and \`/dev-session.end\` slash commands.
+\`.flight-rules/commands/\` remains the source of truth for those workflows.
 `;
 }
 
@@ -146,6 +184,69 @@ export async function copyCommandsWithConflictHandling(
     }
   }
   
+  return { copied, skipped };
+}
+
+/**
+ * Copy directory entries (files or subdirectories) with conflict handling.
+ * Used for repo-local Codex skills.
+ */
+export async function copyDirectoryEntriesWithConflictHandling(
+  sourceDir: string,
+  destDir: string,
+  skipPrompts = false
+): Promise<{ copied: string[]; skipped: string[] }> {
+  const copied: string[] = [];
+  const skipped: string[] = [];
+
+  if (!existsSync(sourceDir)) {
+    return { copied, skipped };
+  }
+
+  const entries = readdirSync(sourceDir).filter(name => !name.startsWith('.'));
+  let batchAction: 'replace_all' | 'skip_all' | null = null;
+
+  for (const entry of entries) {
+    const srcPath = join(sourceDir, entry);
+    const destPath = join(destDir, entry);
+
+    if (existsSync(destPath)) {
+      if (skipPrompts) {
+        cpSync(srcPath, destPath, { recursive: true });
+        copied.push(entry);
+        continue;
+      }
+
+      if (batchAction === 'replace_all') {
+        cpSync(srcPath, destPath, { recursive: true });
+        copied.push(entry);
+        continue;
+      }
+      if (batchAction === 'skip_all') {
+        skipped.push(entry);
+        continue;
+      }
+
+      const action = await promptForConflict(entry, entries.length > 1);
+      if (action === 'replace_all') {
+        batchAction = 'replace_all';
+        cpSync(srcPath, destPath, { recursive: true });
+        copied.push(entry);
+      } else if (action === 'skip_all') {
+        batchAction = 'skip_all';
+        skipped.push(entry);
+      } else if (action === 'replace') {
+        cpSync(srcPath, destPath, { recursive: true });
+        copied.push(entry);
+      } else {
+        skipped.push(entry);
+      }
+    } else {
+      cpSync(srcPath, destPath, { recursive: true });
+      copied.push(entry);
+    }
+  }
+
   return { copied, skipped };
 }
 
@@ -290,6 +391,32 @@ export function isCursorAdapterInstalled(cwd: string): boolean {
 }
 
 /**
+ * Setup Codex-specific repo skills
+ */
+export async function setupCodexSkills(
+  cwd: string,
+  sourceSkillsDir: string,
+  skipPrompts = false
+): Promise<{ copied: string[]; skipped: string[] }> {
+  const agentsDir = join(cwd, '.agents');
+  const skillsDir = join(agentsDir, 'skills');
+
+  ensureDir(agentsDir);
+  ensureDir(skillsDir);
+
+  return copyDirectoryEntriesWithConflictHandling(sourceSkillsDir, skillsDir, skipPrompts);
+}
+
+/**
+ * Check if Codex adapter is installed (has repo-local Flight Rules skills)
+ */
+export function isCodexAdapterInstalled(cwd: string): boolean {
+  return CODEX_SKILL_DIRECTORIES.some((skillDir) =>
+    existsSync(join(cwd, '.agents', 'skills', skillDir))
+  );
+}
+
+/**
  * Setup Claude Code-specific directories and commands
  */
 export async function setupClaudeCommands(
@@ -332,6 +459,11 @@ export function isAdapterInstalled(cwd: string, adapterKey: string): boolean {
     return existsSync(join(cwd, config.filename)) || isClaudeAdapterInstalled(cwd);
   }
 
+  if (adapterKey === 'codex') {
+    // For Codex, check both AGENTS.md and repo-local Codex skills
+    return existsSync(join(cwd, config.filename)) || isCodexAdapterInstalled(cwd);
+  }
+
   return existsSync(join(cwd, config.filename));
 }
 
@@ -358,6 +490,7 @@ export async function adapter(args: string[]) {
     if (!interactive) {
       // Non-interactive: require explicit adapter flags
       p.log.error('No adapters specified. In non-interactive mode, use:');
+      console.log('  flight-rules adapter --codex');
       console.log('  flight-rules adapter --cursor');
       console.log('  flight-rules adapter --claude');
       console.log('  flight-rules adapter --all');
@@ -368,12 +501,14 @@ export async function adapter(args: string[]) {
       message: 'Which adapters would you like to generate?',
       options: Object.entries(ADAPTERS).map(([key, config]) => ({
         value: key,
-        label: config.commandsDirectory
-          ? `${config.name} (${config.filename} + ${config.commandsDirectory}/)`
-          : `${config.name} (${config.filename})`,
-        hint: key === 'cursor' ? 'recommended' : undefined,
+        label: config.nativeTargetDirectory
+          ? `${config.name} (${config.filename} + ${config.nativeTargetDirectory}/)`
+          : config.commandsDirectory
+            ? `${config.name} (${config.filename} + ${config.commandsDirectory}/)`
+            : `${config.name} (${config.filename})`,
+        hint: key === 'codex' ? 'recommended' : undefined,
       })),
-      initialValues: ['cursor'],
+      initialValues: ['codex'],
     });
     
     if (p.isCancel(selection)) {
@@ -390,45 +525,46 @@ export async function adapter(args: string[]) {
 export async function generateAdapters(adapterNames: string[], sourceCommandsDir?: string, interactive = true) {
   const cwd = process.cwd();
   const flightRulesDir = getFlightRulesDir(cwd);
+  const handledAdapterFiles = new Set<string>();
 
   // Default to .flight-rules/commands if no source specified
   const commandsDir = sourceCommandsDir ?? join(flightRulesDir, 'commands');
   const skillsDir = join(flightRulesDir, 'skills');
+  const codexSkillsDir = join(flightRulesDir, 'skills', 'codex');
 
   for (const name of adapterNames) {
     const config = ADAPTERS[name];
     if (!config) continue;
 
     const filePath = join(cwd, config.filename);
-    let adapterFileWritten = false;
+    const adapterLabel = config.template === 'shared-agents' ? 'Codex and Cursor' : config.name;
 
-    // Check if file already exists
-    if (existsSync(filePath)) {
-      if (interactive) {
-        const overwrite = await p.confirm({
-          message: `${config.filename} already exists. Overwrite?`,
-          initialValue: false,
-        });
+    if (!handledAdapterFiles.has(filePath)) {
+      handledAdapterFiles.add(filePath);
 
-        if (p.isCancel(overwrite) || !overwrite) {
-          p.log.info(`Skipped ${config.filename}`);
-          // Don't continue - still need to set up commands directory
+      if (existsSync(filePath)) {
+        if (interactive) {
+          const overwrite = await p.confirm({
+            message: `${config.filename} already exists. Overwrite?`,
+            initialValue: false,
+          });
+
+          if (p.isCancel(overwrite) || !overwrite) {
+            p.log.info(`Skipped ${config.filename}`);
+          } else {
+            const content = generateAdapterContent(config);
+            writeFileSync(filePath, content, 'utf-8');
+            p.log.success(`Updated ${pc.cyan(config.filename)} for ${adapterLabel}`);
+          }
         } else {
-          const content = generateAdapterContent(config);
-          writeFileSync(filePath, content, 'utf-8');
-          p.log.success(`Updated ${pc.cyan(config.filename)} for ${config.name}`);
-          adapterFileWritten = true;
+          // Non-interactive: skip overwrite (safe default)
+          p.log.info(`Skipped ${config.filename} (already exists)`);
         }
       } else {
-        // Non-interactive: skip overwrite (safe default)
-        p.log.info(`Skipped ${config.filename} (already exists)`);
-        // Don't continue - still need to set up commands directory
+        const content = generateAdapterContent(config);
+        writeFileSync(filePath, content, 'utf-8');
+        p.log.success(`Created ${pc.cyan(config.filename)} for ${adapterLabel}`);
       }
-    } else {
-      const content = generateAdapterContent(config);
-      writeFileSync(filePath, content, 'utf-8');
-      p.log.success(`Created ${pc.cyan(config.filename)} for ${config.name}`);
-      adapterFileWritten = true;
     }
 
     // For Cursor, also set up .cursor/commands/ and .cursor/skills/
@@ -482,6 +618,19 @@ export async function generateAdapters(adapterNames: string[], sourceCommandsDir
         }
       }
     }
+
+    if (name === 'codex') {
+      const skipPrompts = !interactive;
+      const skillsDirExists = isCodexAdapterInstalled(cwd);
+      const result = await setupCodexSkills(cwd, codexSkillsDir, skipPrompts);
+
+      if (result.copied.length > 0) {
+        const action = skillsDirExists ? 'Updated' : 'Created';
+        p.log.success(`${action} ${pc.cyan('.agents/skills/')} with ${result.copied.length} skill(s)`);
+      }
+      if (result.skipped.length > 0) {
+        p.log.info(`Skipped ${result.skipped.length} existing skill(s) in .agents/skills/`);
+      }
+    }
   }
 }
-

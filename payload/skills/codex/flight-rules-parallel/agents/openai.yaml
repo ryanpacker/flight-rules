@@ -1,0 +1,3 @@
+interface:
+  display_name: "Flight Rules Parallel"
+  short_description: "Manage Flight Rules worktree sessions"

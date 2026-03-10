@@ -181,10 +181,11 @@ export async function init() {
       const adapters = await p.multiselect({
         message: 'Which adapters would you like to generate?',
         options: [
-          { value: 'cursor', label: 'Cursor (AGENTS.md + .cursor/commands/)', hint: 'recommended' },
+          { value: 'codex', label: 'Codex (AGENTS.md + .agents/skills/)', hint: 'recommended' },
+          { value: 'cursor', label: 'Cursor (AGENTS.md + .cursor/commands/)' },
           { value: 'claude', label: 'Claude Code (CLAUDE.md + .claude/commands/)' },
         ],
-        initialValues: ['cursor'],
+        initialValues: ['codex'],
       });
       
       if (p.isCancel(adapters)) {
@@ -198,7 +199,7 @@ export async function init() {
     }
   } else {
     // Non-interactive: skip adapter generation (user can run `flight-rules adapter` separately)
-    p.log.info('Skipping adapter generation. Run `flight-rules adapter --cursor` or `--claude` to generate adapters.');
+    p.log.info('Skipping adapter generation. Run `flight-rules adapter --codex`, `--cursor`, or `--claude` to generate adapters.');
   }
   
   // Ask about installing .editorconfig

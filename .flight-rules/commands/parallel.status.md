@@ -18,8 +18,8 @@ When the user invokes "parallel status", show the state of all active parallel s
 | `flight-rules parallel cleanup` | Clean up orphaned sessions |
 | `flight-rules parallel remove <name>` | End a session with merge workflow |
 
-To switch to a session, open a new terminal:
+To switch to a session, open the worktree in your preferred agent:
 ```
 cd <worktree-path>
-claude
+# then launch codex, claude, Cursor, or another agent here
 ```
