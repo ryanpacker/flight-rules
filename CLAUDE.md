@@ -1,29 +1,18 @@
-# Flight Rules – Claude Code Adapter
+# Flight Rules v2 -- agent guidelines
 
-This file is placed at the project root as `CLAUDE.md` for Claude Code compatibility.
+Read `docs/plan.md` before doing anything else. It is the build plan and the
+source of truth for vocabulary, schema, phasing, and settled decisions.
 
----
+## Ground rules
 
-**This project uses Flight Rules.**
-
-Agent guidelines and workflows live in `.flight-rules/`. Project documentation lives in `docs/`.
-
-## Quick Reference
-
-| What | Where |
-|------|-------|
-| Agent Guidelines | `.flight-rules/AGENTS.md` |
-| PRD | `docs/prd.md` |
-| Implementation Specs | `docs/implementation/` |
-| Progress Log | `docs/progress.md` |
-| Session Commands | `.claude/commands/` (as slash commands) |
-
-## For Agents
-
-Please read `.flight-rules/AGENTS.md` for complete guidelines on:
-- Project structure
-- Implementation specs
-- Coding sessions
-- How to work with this system
-
-Use the `/dev-session.start` and `/dev-session.end` slash commands.
+- **This repo is public.** Never commit machine-specific paths, deployment
+  names, secrets, or anything identifying a specific company's internal work.
+  Project-specific configuration lives in the Convex database and `.env.local`,
+  never in git.
+- Package manager is **pnpm** (see `packageManager` in package.json).
+- The board's dev server is pinned to **port 3999** -- don't change it; flight
+  environments in consumer projects use their own port ranges.
+- Keep the stack lean: TanStack Start + Convex + Tailwind. Add dependencies
+  only when the plan calls for them.
+- v1 (the markdown conventions framework) lives on the `v1` branch. Leave it
+  untouched.

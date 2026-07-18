@@ -1,52 +1,37 @@
 {
   "name": "flight-rules",
-  "version": "0.15.8",
-  "description": "An opinionated framework for AI-assisted software development",
+  "version": "2.0.0-alpha.0",
+  "description": "Flight Rules v2: a live coordination plane for AI-assisted, multi-agent software development. Flights, ATC, and the board.",
+  "private": true,
   "type": "module",
-  "main": "dist/index.js",
-  "bin": {
-    "flight-rules": "dist/index.js"
-  },
-  "files": [
-    "dist",
-    "payload"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/ryanpacker/flight-rules.git"
-  },
-  "publishConfig": {
-    "tag": "dev"
-  },
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch",
-    "start": "node dist/index.js",
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
-    "prepublishOnly": "npm run build",
-    "version": "npm run build && node scripts/sync-version.js && git add payload/AGENTS.md dist/"
-  },
-  "keywords": [
-    "cli",
-    "ai",
-    "development",
-    "agents",
-    "documentation"
-  ],
-  "author": "",
-  "license": "MIT",
-  "devDependencies": {
-    "@types/node": "^20.10.0",
-    "@types/tar": "^6.1.13",
-    "@vitest/coverage-v8": "^4.0.16",
-    "typescript": "^5.3.0",
-    "vitest": "^4.0.16"
+    "format": "prettier --write"
   },
   "dependencies": {
-    "@clack/prompts": "^0.7.0",
-    "picocolors": "^1.0.0",
-    "tar": "^7.5.2"
-  }
+    "@tailwindcss/vite": "^4.0.6",
+    "@tanstack/react-router": "^1.132.0",
+    "@tanstack/react-start": "^1.132.0",
+    "@tanstack/router-plugin": "^1.132.0",
+    "convex": "^1.31.2",
+    "nitro": "npm:nitro-nightly@3.0.1-20260120-020848-6786d069",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "tailwindcss": "^4.0.6",
+    "vite-tsconfig-paths": "^6.0.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^5.0.4",
+    "prettier": "^3.5.3",
+    "typescript": "^5.7.2",
+    "vite": "^7.1.7",
+    "vitest": "^3.0.5"
+  },
+  "packageManager": "pnpm@11.13.1"
 }
