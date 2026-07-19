@@ -1,1 +1,146 @@
 @import 'tailwindcss';
+
+/* Hangar tokens (see prototypes/multi-project/01-hangar.html). Six named
+   hexes; everything else derived with color-mix. Accent is links/focus only,
+   never health; semantic hues never appear on links. */
+@theme {
+  --color-paper: #faf8f4;
+  --color-ink: #23201b;
+  --color-hairline: #e8e2d8;
+  --color-accent: #15616a;
+  --color-good: #37804c;
+  --color-warn: #a9741a;
+  --color-crit: #b23b32;
+
+  --color-ink-2: color-mix(in srgb, #23201b 64%, #faf8f4);
+  --color-ink-3: color-mix(in srgb, #23201b 45%, #faf8f4);
+  --color-panel: color-mix(in srgb, #23201b 3.5%, #faf8f4);
+  --color-warn-bg: color-mix(in srgb, #a9741a 9%, #faf8f4);
+  --color-warn-line: color-mix(in srgb, #a9741a 30%, #faf8f4);
+  --color-warn-ink: color-mix(in srgb, #a9741a 80%, #23201b);
+  --color-warn-tint: color-mix(in srgb, #a9741a 3%, #faf8f4);
+  --color-warn-tint-hover: color-mix(in srgb, #a9741a 6%, #faf8f4);
+  --color-good-bg: color-mix(in srgb, #37804c 10%, #faf8f4);
+  --color-row-hover: color-mix(in srgb, #15616a 4%, #faf8f4);
+  --color-chip: color-mix(in srgb, #23201b 7%, #faf8f4);
+  --color-silent-tint: color-mix(in srgb, #23201b 1.5%, #faf8f4);
+  --color-silent-tint-hover: color-mix(in srgb, #23201b 3.5%, #faf8f4);
+  --color-accent-faded: color-mix(in srgb, #15616a 55%, #faf8f4);
+
+  --font-display: Charter, 'Iowan Old Style', Palatino, Georgia, serif;
+  --font-sans: system-ui, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  --font-mono:
+    ui-monospace, 'SF Mono', 'Cascadia Code', Menlo, Consolas, monospace;
+}
+
+@layer base {
+  html {
+    background: var(--color-paper);
+  }
+  body {
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.45;
+    color: var(--color-ink);
+    -webkit-font-smoothing: antialiased;
+  }
+  a {
+    color: var(--color-accent);
+    border-radius: 2px;
+  }
+  a:hover {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  a:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+    text-decoration: none;
+  }
+}
+
+@layer components {
+  /* Structural grids + the prototype's responsive degrade. */
+  .projects-grid {
+    display: grid;
+    grid-template-columns: 250px 1fr 320px 130px 140px 24px;
+    column-gap: 24px;
+    align-items: center;
+  }
+  .flight-grid {
+    display: grid;
+    grid-template-columns: 118px 172px 1fr 250px minmax(210px, 0.8fr) 128px;
+    column-gap: 20px;
+    align-items: center;
+  }
+  .lower-grid {
+    display: grid;
+    grid-template-columns: 5fr 7fr;
+    gap: 48px;
+  }
+
+  @media (max-width: 1180px) {
+    .projects-grid {
+      grid-template-columns: 210px 1fr 250px 120px 20px;
+    }
+    .col-prs-home {
+      display: none;
+    }
+  }
+  @media (max-width: 1080px) {
+    .flight-grid {
+      grid-template-columns: 110px 150px 1fr 210px 120px;
+    }
+    .col-pr {
+      display: none;
+    }
+  }
+  @media (max-width: 960px) {
+    .lower-grid {
+      grid-template-columns: 1fr;
+      gap: 32px;
+    }
+    .projects-grid-head {
+      display: none;
+    }
+    .projects-grid {
+      grid-template-columns: 1fr 20px;
+      row-gap: 8px;
+    }
+  }
+  @media (max-width: 760px) {
+    .flight-grid-head {
+      display: none;
+    }
+    .flight-grid {
+      grid-template-columns: 1fr 1fr;
+      row-gap: 6px;
+    }
+  }
+
+  /* Dormant board: fade the observed data, keep the warning legible.
+     Status words keep their own color classes and stay colored. */
+  .board-dormant .flight-grid,
+  .board-dormant .tower-band dd {
+    color: var(--color-ink-3);
+  }
+  .board-dormant .flight-grid a,
+  .board-dormant .tower-band dd a {
+    color: var(--color-accent-faded);
+  }
+}
+
+/* Row enter/exit only: keep the root snapshot static so a takeoff or landing
+   animates just its row, never the whole page. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
