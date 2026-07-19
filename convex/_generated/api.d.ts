@@ -8,13 +8,27 @@
  * @module
  */
 
+import type * as board from "../board.js";
+import type * as http from "../http.js";
+import type * as lib_secret from "../lib/secret.js";
+import type * as looseEnds from "../looseEnds.js";
+import type * as projects from "../projects.js";
+import type * as report from "../report.js";
+
 import type {
   ApiFromModules,
   FilterApi,
   FunctionReference,
 } from "convex/server";
 
-declare const fullApi: ApiFromModules<{}>;
+declare const fullApi: ApiFromModules<{
+  board: typeof board;
+  http: typeof http;
+  "lib/secret": typeof lib_secret;
+  looseEnds: typeof looseEnds;
+  projects: typeof projects;
+  report: typeof report;
+}>;
 
 /**
  * A utility for referencing Convex functions in your app's public API.

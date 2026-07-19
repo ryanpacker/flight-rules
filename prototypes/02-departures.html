@@ -1,0 +1,381 @@
+<!doctype html>
+<!--
+  TOKEN PLAN — Direction 2 of 5: "DEPARTURES" (airport FIDS, professional restraint)
+
+  COLORS (warm black ground, never blue-slate):
+    ─ ground   #131110  page background (warm black)
+    ─ panel    #1B1815  masthead/tower strip, subrow zones
+    ─ hairline #2E2A24  row separators, panel borders
+    ─ ink      #D9D4C7  primary display text (warm off-white)
+    ─ dim      #8C8577  secondary text, dim annunciator copy
+    ─ amber    #FFB400  the single FIDS signage accent: board titles, links,
+                         highlights, staleness callouts (with a soft glow)
+    semantic health, kept muted and separate from the accent:
+    ─ good     #5FBF6E  ON TIME lamp
+    ─ bad      #E05252  NO CONTACT lamp
+    (STALE / NOT DEPARTED get no lamp color: hollow ring — absence of signal,
+     with the staleness itself carried in amber on the REPORTED cell.)
+
+  TYPE ROLES (all monospace: ui-monospace / SF Mono stack — signage engineering):
+    ─ display   16px/600 amber, letter-spaced caps — masthead board title
+    ─ colhead   11px/600 caps, +0.14em tracking, dim — column headers, section heads
+    ─ row       13.5px ink, tabular-nums — board cells
+    ─ status    11.5px/600 caps +0.10em — signage status words
+    ─ small     11.5px dim — commit sublines, annunciator panels
+    ─ tag       10px/600 caps +0.12em — activity kind tags, PR state, DIRTY chips
+
+  LAYOUT:
+    ─ single column, max-width 1360px centered, 32px gutters
+    ─ masthead bar (title left, fleet status line right) → tower strip (board's
+      fixed header zone) → departures board (CSS grid rows, hairline-separated;
+      each flight = main grid row + dim commit subline) → two quieter columns
+      below: LOOSE ENDS | ACTIVITY (annunciator small print)
+    ─ board grid: FLIGHT 1.1fr / BRANCH 1.5fr / GATE 64px / DEPLOYMENT 1.1fr /
+      POSITION 96px / PR 104px / STATUS 148px / REPORTED 84px(right)
+    ─ board wrapped in overflow-x:auto (min-width 1080px) — page never scrolls X
+    ─ one touch of life: fixed radial vignette on ground + faint amber text glow;
+      zero animation, so nothing to gate behind prefers-reduced-motion
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SKYWAY · Departures — Flight Rules</title>
+<style>
+  :root{
+    --ground:#131110;
+    --panel:#1B1815;
+    --hairline:#2E2A24;
+    --ink:#D9D4C7;
+    --dim:#8C8577;
+    --amber:#FFB400;
+    --good:#5FBF6E;
+    --bad:#E05252;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{background:var(--ground)}
+  body{
+    font-family:var(--mono);
+    font-size:13.5px;
+    line-height:1.5;
+    color:var(--ink);
+    background:
+      radial-gradient(1200px 600px at 50% -10%, rgba(255,180,0,0.045), transparent 65%),
+      var(--ground);
+    min-height:100vh;
+    font-variant-numeric:tabular-nums;
+  }
+  a{color:var(--amber);text-decoration:none;border-bottom:1px solid rgba(255,180,0,.35)}
+  a:hover{border-bottom-color:var(--amber)}
+  a:focus-visible{outline:2px solid var(--amber);outline-offset:2px;border-radius:1px}
+  .wrap{max-width:1360px;margin:0 auto;padding:0 32px 56px}
+
+  /* ── masthead ─────────────────────────────────────────── */
+  .masthead{
+    display:flex;align-items:baseline;justify-content:space-between;gap:24px;
+    padding:26px 0 14px;flex-wrap:wrap;
+  }
+  .board-title{
+    font-size:16px;font-weight:600;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--amber);text-shadow:0 0 14px rgba(255,180,0,.28);
+  }
+  .board-title .sep{color:var(--dim);text-shadow:none;font-weight:400}
+  .subtitle{font-size:11.5px;color:var(--dim);margin-top:4px;letter-spacing:.02em}
+  .fleet-status{
+    font-size:11.5px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--ink);text-align:right;
+  }
+  .fleet-status .n-good{color:var(--good)}
+  .fleet-status .n-bad{color:var(--bad)}
+  .fleet-status .n-warn{color:var(--amber)}
+  .fleet-status .dot-sep{color:var(--hairline);padding:0 .35em}
+  .fleet-meta{font-size:11px;color:var(--dim);letter-spacing:.04em;text-transform:none;font-weight:400;margin-top:4px}
+
+  /* ── tower strip (board fixed-header zone) ────────────── */
+  .tower{
+    background:var(--panel);
+    border:1px solid var(--hairline);
+    border-radius:3px;
+    padding:11px 18px;
+    display:flex;align-items:baseline;gap:0;flex-wrap:wrap;
+    margin-bottom:26px;
+  }
+  .tower .twr-tag{
+    font-size:10px;font-weight:600;letter-spacing:.16em;color:var(--ground);
+    background:var(--amber);border-radius:2px;padding:2px 7px;margin-right:16px;
+    align-self:center;
+  }
+  .tower .cell{font-size:12.5px;color:var(--ink);white-space:nowrap}
+  .tower .cell + .cell{margin-left:22px;padding-left:22px;border-left:1px solid var(--hairline)}
+  .tower .lbl{font-size:10px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-right:7px}
+  .tower .ok{color:var(--good)}
+  .tower .warn{color:var(--amber)}
+
+  /* ── departures board ─────────────────────────────────── */
+  .board-scroll{overflow-x:auto}
+  .board{min-width:1080px;border:1px solid var(--hairline);border-radius:3px;background:rgba(27,24,21,.55)}
+  .grid{
+    display:grid;
+    grid-template-columns:1.1fr 1.5fr 64px 1.1fr 96px 104px 148px 84px;
+    gap:0 18px;align-items:baseline;
+    padding:0 18px;
+  }
+  .colheads{
+    padding-top:10px;padding-bottom:9px;
+    border-bottom:1px solid var(--hairline);
+    background:var(--panel);
+  }
+  .colheads span{
+    font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--dim);
+  }
+  .flight{border-bottom:1px solid var(--hairline)}
+  .flight:last-child{border-bottom:none}
+  .row{padding-top:13px}
+  .subrow{
+    padding:3px 18px 12px;
+    font-size:11.5px;color:var(--dim);
+    letter-spacing:.01em;
+  }
+  .subrow .h{color:#A39B8B}
+  .subrow .csep{color:var(--hairline);padding:0 .5em}
+  .c-right{text-align:right}
+  .flightname{font-weight:600;letter-spacing:.04em;color:var(--ink)}
+  .cell-dim{color:var(--dim)}
+  .pos{white-space:nowrap}
+  .pos .up{color:var(--ink)}
+  .pos .down{color:var(--dim)}
+  .pos .down-warn{color:var(--amber)}
+  .dirty{
+    display:inline-block;font-size:10px;font-weight:600;letter-spacing:.12em;
+    color:var(--amber);border:1px solid rgba(255,180,0,.4);border-radius:2px;
+    padding:0 5px;margin-left:8px;vertical-align:1px;
+  }
+  .prstate{
+    font-size:10px;font-weight:600;letter-spacing:.12em;color:var(--dim);margin-left:7px;
+  }
+  .none{color:var(--dim)}
+
+  /* status lamps + signage words */
+  .status{white-space:nowrap;font-size:11.5px;font-weight:600;letter-spacing:.10em;text-transform:uppercase}
+  .lamp{
+    display:inline-block;width:8px;height:8px;border-radius:50%;
+    margin-right:8px;vertical-align:0;
+  }
+  .st-ontime .lamp{background:var(--good);box-shadow:0 0 7px rgba(95,191,110,.55)}
+  .st-ontime{color:var(--good)}
+  .st-nocontact .lamp{background:var(--bad);box-shadow:0 0 7px rgba(224,82,82,.5)}
+  .st-nocontact{color:var(--bad)}
+  .st-stale .lamp{background:transparent;border:1.5px solid var(--amber);width:6px;height:6px}
+  .st-stale{color:var(--amber)}
+  .st-nodep .lamp{background:transparent;border:1.5px dashed var(--dim);width:6px;height:6px}
+  .st-nodep{color:var(--dim)}
+
+  .reported{color:var(--dim)}
+  .reported.fresh{color:var(--ink)}
+  .reported.stale{
+    color:var(--amber);font-weight:600;
+    text-shadow:0 0 10px rgba(255,180,0,.3);
+  }
+  /* whole-row dimming for the two untrustworthy flights */
+  .is-stale .row > *:not(.status):not(.reported),
+  .is-stale .subrow{opacity:.62}
+  .is-nodep .row > *:not(.status):not(.reported),
+  .is-nodep .subrow{opacity:.62}
+
+  /* ── annunciator panels (loose ends / activity) ───────── */
+  .panels{
+    display:grid;grid-template-columns:5fr 7fr;gap:26px;
+    margin-top:26px;
+  }
+  .panel h2{
+    font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--dim);
+    border-bottom:1px solid var(--hairline);
+    padding-bottom:8px;margin-bottom:2px;
+  }
+  .panel ul{list-style:none}
+  .panel li{
+    display:flex;align-items:baseline;gap:12px;
+    padding:9px 0;border-bottom:1px solid rgba(46,42,36,.6);
+    font-size:11.5px;color:var(--dim);
+  }
+  .panel li:last-child{border-bottom:none}
+  .panel .txt{flex:1;color:#B3AC9D}
+  .panel .age{white-space:nowrap;color:var(--dim)}
+  .panel .src{white-space:nowrap;font-size:10px;letter-spacing:.08em;text-transform:uppercase}
+  .tag{
+    display:inline-block;min-width:86px;
+    font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+    white-space:nowrap;
+  }
+  .tag.takeoff{color:var(--amber)}
+  .tag.landing{color:var(--good)}
+  .tag.scrub{color:var(--bad)}
+  .tag.propen{color:#B3AC9D}
+  .tag.release{color:var(--ink)}
+
+  @media (max-width:900px){
+    .panels{grid-template-columns:1fr}
+    .fleet-status{text-align:left}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ── masthead ── -->
+  <header class="masthead">
+    <div>
+      <div class="board-title">Skyway <span class="sep">·</span> Departures</div>
+      <div class="subtitle">Direction 2 of 5 — “Departures”: an airport information display, executed with signage restraint · <a href="#">skyway/skyway-app</a> → <a href="#">main</a></div>
+    </div>
+    <div class="fleet-status">
+      <span class="n-good">2 on time</span><span class="dot-sep">·</span><span class="n-bad">1 no contact</span><span class="dot-sep">·</span><span class="n-warn">1 stale</span><span class="dot-sep">·</span>1 not departed
+      <div class="fleet-meta">5 flights active · all data as reported by flights, not observed live</div>
+    </div>
+  </header>
+
+  <!-- ── tower strip ── -->
+  <section class="tower" aria-label="Tower (main checkout)">
+    <span class="twr-tag">TWR</span>
+    <span class="cell"><span class="lbl">Branch</span><a href="#">main</a></span>
+    <span class="cell"><span class="lbl">Tree</span><span class="ok">clean</span></span>
+    <span class="cell"><span class="lbl">Unpushed</span>0</span>
+    <span class="cell"><span class="lbl">Dev</span>v3.42.0</span>
+    <span class="cell"><span class="lbl">Prod</span>v3.41.2 <span class="warn" title="Production is one release behind dev">▾ 1 behind</span></span>
+    <span class="cell"><span class="lbl">Reported</span>40s ago</span>
+  </section>
+
+  <!-- ── departures board ── -->
+  <section class="board-scroll" aria-label="Departures board">
+    <div class="board">
+      <div class="grid colheads">
+        <span>Flight</span><span>Branch</span><span>Gate</span><span>Deployment</span>
+        <span>Position</span><span>PR</span><span>Status</span><span class="c-right">Reported</span>
+      </div>
+
+      <!-- checkout-redesign -->
+      <div class="flight">
+        <div class="grid row">
+          <span class="flightname">checkout-redesign</span>
+          <span><a href="#">feat/checkout-redesign</a></span>
+          <span><a href="#" title="Dev server port">4101</a></span>
+          <span><a href="#">brisk-otter-421</a></span>
+          <span class="pos" title="Ahead 4, behind 1 vs main"><span class="up">↑4</span> <span class="down">↓1</span></span>
+          <span><a href="#" title="Checkout redesign: new payment sheet">#142</a><span class="prstate">OPEN</span></span>
+          <span class="status st-ontime" title="Dev server listening; environment healthy"><span class="lamp"></span>ON TIME</span>
+          <span class="reported fresh c-right">40s</span>
+        </div>
+        <div class="subrow">tree clean · proc node<span class="csep">|</span><span class="h">a41f2c9</span> feat(checkout): wire payment sheet to vault<span class="csep">·</span><span class="h">9c02b11</span> feat(checkout): skeleton payment sheet<span class="csep">·</span><span class="h">77d31e0</span> chore: split checkout routes</div>
+      </div>
+
+      <!-- rate-limiter -->
+      <div class="flight">
+        <div class="grid row">
+          <span class="flightname">rate-limiter</span>
+          <span><a href="#">fix/api-rate-limits</a><span class="dirty" title="3 uncommitted files">3 DIRTY</span></span>
+          <span><a href="#" title="Dev server port">4102</a></span>
+          <span><a href="#">calm-heron-77</a></span>
+          <span class="pos" title="Ahead 9, behind 6 vs main"><span class="up">↑9</span> <span class="down">↓6</span></span>
+          <span><a href="#" title="Token-bucket rate limiting for public API">#139</a><span class="prstate">DRAFT</span></span>
+          <span class="status st-nocontact" title="Dev server not listening on port 4102"><span class="lamp"></span>NO CONTACT</span>
+          <span class="reported fresh c-right">2m</span>
+        </div>
+        <div class="subrow">3 dirty files<span class="csep">|</span><span class="h">5b8e0d2</span> fix(api): burst allowance for authenticated clients<span class="csep">·</span><span class="h">e11a9c4</span> test(api): rate-limit integration harness<span class="csep">·</span><span class="h">0f6b7aa</span> fix(api): 429 retry-after headers</div>
+      </div>
+
+      <!-- search-facets -->
+      <div class="flight">
+        <div class="grid row">
+          <span class="flightname">search-facets</span>
+          <span><a href="#">feat/search-facets</a></span>
+          <span><a href="#" title="Dev server port">4103</a></span>
+          <span><a href="#">noble-crane-303</a></span>
+          <span class="pos" title="Ahead 12, behind 0 vs main"><span class="up">↑12</span> <span class="down">↓0</span></span>
+          <span><a href="#" title="Faceted search filters">#144</a><span class="prstate">OPEN</span></span>
+          <span class="status st-ontime" title="Dev server listening; environment healthy"><span class="lamp"></span>ON TIME</span>
+          <span class="reported fresh c-right">55s</span>
+        </div>
+        <div class="subrow">tree clean · proc node<span class="csep">|</span><span class="h">c9d4e88</span> feat(search): facet counts endpoint<span class="csep">·</span><span class="h">2a7b910</span> feat(search): filter chips UI<span class="csep">·</span><span class="h">88c1f02</span> refactor(search): extract query builder</div>
+      </div>
+
+      <!-- onboarding-copy (STALE) -->
+      <div class="flight is-stale">
+        <div class="grid row">
+          <span class="flightname">onboarding-copy</span>
+          <span><a href="#">chore/onboarding-copy</a><span class="dirty" title="1 uncommitted file">1 DIRTY</span></span>
+          <span><a href="#" title="Dev server port">4104</a></span>
+          <span><a href="#">quiet-finch-88</a></span>
+          <span class="pos" title="Ahead 2, behind 14 vs main — falling far behind main"><span class="up">↑2</span> <span class="down-warn">↓14</span></span>
+          <span class="none">—</span>
+          <span class="status st-stale" title="Last report is 38 minutes old — data below may no longer be true. Last known: not listening."><span class="lamp"></span>STALE</span>
+          <span class="reported stale c-right" title="Report is 38 minutes old">▴ 38m</span>
+        </div>
+        <div class="subrow">1 dirty file · last known: not listening<span class="csep">|</span><span class="h">b3a0c77</span> chore(onboarding): welcome screen copy pass<span class="csep">·</span><span class="h">41d9e06</span> chore(onboarding): empty-state copy<span class="csep">·</span><span class="h">d72f813</span> chore: rename tour steps</div>
+      </div>
+
+      <!-- perf-budget (never reported) -->
+      <div class="flight is-nodep">
+        <div class="grid row">
+          <span class="flightname">perf-budget</span>
+          <span><a href="#">feat/perf-budget-ci</a></span>
+          <span><a href="#" title="Dev server port">4105</a></span>
+          <span><a href="#">wry-egret-514</a></span>
+          <span class="pos none">—</span>
+          <span class="none">—</span>
+          <span class="status st-nodep" title="This flight has never filed a report; nothing is known about its environment yet"><span class="lamp"></span>NOT DEPARTED</span>
+          <span class="reported c-right" title="No report has ever been received">never</span>
+        </div>
+        <div class="subrow">no report received yet — worktree registered, awaiting first check-in</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── annunciator panels ── -->
+  <section class="panels">
+    <div class="panel" aria-label="Loose ends">
+      <h2>Loose Ends · 3</h2>
+      <ul>
+        <li><span class="txt">Flaky e2e: checkout retries fail on Safari</span><span class="src">auto-fix run</span><span class="age">3h</span></li>
+        <li><span class="txt">Bump Node to 22.12 before next release</span><span class="src">ATC</span><span class="age">1d</span></li>
+        <li><span class="txt">PR <a href="#">#131</a> landed without a changelog entry</span><span class="src">release notes</span><span class="age">2d</span></li>
+      </ul>
+    </div>
+    <div class="panel" aria-label="Activity">
+      <h2>Activity</h2>
+      <ul>
+        <li><span class="tag propen">PR-Opened</span><span class="txt"><a href="#">#144</a> Faceted search filters</span><span class="age">55s</span></li>
+        <li><span class="tag takeoff">Takeoff</span><span class="txt">perf-budget · <a href="#">feat/perf-budget-ci</a></span><span class="age">18m</span></li>
+        <li><span class="tag landing">Landing</span><span class="txt">image-cdn · <a href="#">#138</a> merged</span><span class="age">1h</span></li>
+        <li><span class="tag propen">PR-Opened</span><span class="txt"><a href="#">#142</a> Checkout redesign: new payment sheet</span><span class="age">3h</span></li>
+        <li><span class="tag release">Release</span><span class="txt">v3.42.0 cut from <a href="#">main</a></span><span class="age">5h</span></li>
+        <li><span class="tag takeoff">Takeoff</span><span class="txt">checkout-redesign · <a href="#">feat/checkout-redesign</a></span><span class="age">6h</span></li>
+        <li><span class="tag scrub">Scrub</span><span class="txt">dark-mode-spike · exploration only</span><span class="age">1d</span></li>
+        <li><span class="tag takeoff">Takeoff</span><span class="txt">search-facets · <a href="#">feat/search-facets</a></span><span class="age">1d</span></li>
+        <li><span class="tag propen">PR-Opened</span><span class="txt"><a href="#">#139</a> Token-bucket rate limiting for public API</span><span class="age">2d</span></li>
+        <li><span class="tag takeoff">Takeoff</span><span class="txt">rate-limiter · <a href="#">fix/api-rate-limits</a></span><span class="age">2d</span></li>
+      </ul>
+    </div>
+  </section>
+
+</div>
+
+<!-- Variant Navigation -->
+<nav class="variant-nav" aria-label="Design variants">
+  <a href="01-manifest.html">1</a>
+  <a href="02-departures.html" class="active" aria-current="page">2</a>
+  <a href="03-console.html">3</a>
+  <a href="04-briefing.html">4</a>
+  <a href="05-tower.html">5</a>
+</nav>
+<style>
+  .variant-nav { position: fixed; bottom: 24px; right: 24px; display: flex; gap: 4px; padding: 6px; background: rgba(20,20,20,0.55); backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%); border-radius: 20px; border: 1px solid rgba(255,255,255,0.15); box-shadow: 0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.1), inset 0 0.5px 0 rgba(255,255,255,0.2); z-index: 2147483647; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; transition: opacity 0.3s ease; }
+  .variant-nav:hover { background: rgba(20,20,20,0.7); }
+  .variant-nav a { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 12px; text-decoration: none; font-size: 14px; font-weight: 500; letter-spacing: -0.01em; color: rgba(255,255,255,0.7); text-shadow: 0 1px 3px rgba(0,0,0,0.4); transition: all 0.2s cubic-bezier(0.4,0,0.2,1); background: transparent; border: 1px solid transparent; }
+  .variant-nav a:hover { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.95); border-color: rgba(255,255,255,0.08); }
+  .variant-nav a.active { background: rgba(255,255,255,0.2); color: #fff; font-weight: 600; border-color: rgba(255,255,255,0.15); box-shadow: 0 2px 8px rgba(0,0,0,0.15), inset 0 0.5px 0 rgba(255,255,255,0.25); }
+</style>
+</body>
+</html>

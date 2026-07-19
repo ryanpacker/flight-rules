@@ -1,0 +1,1214 @@
+<!--
+  ============================================================================
+  FLIGHT RULES — Round 2, Direction 3 of 5: "TERMINALS"
+  One page, stacked project sections. Like terminals in one airport: the whole
+  fleet is one continuous scan, but the page is organized BY project. No JS
+  views — navigation is scrolling plus a slim sticky jump-nav of anchors.
+
+  TOKEN PLAN (6 named hexes; everything else derived via color-mix)
+
+    --paper    #FAF9F6   warm paper ground (slight yellow-warm bias, not cream)
+    --ink      #211E1A   warm near-black ink
+    --hairline #E6E2DA   warm hairlines — row separators, rules, borders
+    --accent   #0F5E5B   the ONE quiet accent: deep teal — links + focus only,
+                         never health
+    --good     #2F7D4F   muted semantic green (listening)
+    --warn     #A9741A   muted semantic amber (stale, aging, dirty, drift)
+    derived:   --crit    color-mix red for "not listening", stays muted
+               --ink-2 / --ink-3 secondary + faint ink (mixes of ink→paper)
+               --panel tower band fill, --warn-bg badge fills
+
+  TYPE ROLES
+    display  Charter, "Iowan Old Style", Palatino, Georgia, serif
+             — the fleet lead sentence, the three project names, and the
+               project names in the jump-nav. Nowhere else.
+    ui       system-ui stack — all table text, labels, 11px letter-spaced
+             caps column headers (Manifest anatomy).
+    mono     ui-monospace stack — every identifier: branches, ports, shas,
+             deployments, PR numbers, versions. tabular-nums where digits
+             align (positions, ages, counts).
+
+  LAYOUT (Manifest bones, Briefing warmth)
+    1360px shell, 32px gutters. Header: brand line → serif fleet lead →
+    global meta line. Then a slim STICKY jump-nav (the project selector in
+    this IA): three anchor links with tiny aggregate health dots; scroll-spy
+    (small vanilla JS, IntersectionObserver) marks the section in view.
+    Three PROJECT SECTIONS, each opened by a strong 3px section rule — a
+    heavier stroke than any row hairline, so section breaks outrank rows:
+      serif project heading + repo + inline health summary
+      compact tower band (Manifest style, version drift called out)
+      full-width flights grid (status / flight / branch·position / env /
+        PR / reported), 3px left state stripe on stale/silent rows,
+        per-row commits <details>
+      loose ends inline as a short list (heading skipped when none)
+    helios-docs reads dormant AS A SECTION: local --ink/--accent/--good
+    remap drops the whole body's contrast, plus an explicit full-contrast
+    "nothing heard in 2 days" notice band.
+    Bottom: ONE global activity feed, merged newest-first, with a quiet
+    letter-spaced project tag per entry — activity stays global on purpose;
+    that asymmetry is what this variant tests.
+  ============================================================================
+-->
+<title>Flight Rules — Terminals</title>
+<style>
+  /* ---- tokens ---- */
+  :root {
+    --paper:    #FAF9F6;
+    --ink:      #211E1A;
+    --hairline: #E6E2DA;
+    --accent:   #0F5E5B;
+    --good:     #2F7D4F;
+    --warn:     #A9741A;
+
+    /* derived */
+    --crit:     color-mix(in srgb, #C03A2E 88%, var(--ink));
+    --ink-2:    color-mix(in srgb, var(--ink) 64%, var(--paper));
+    --ink-3:    color-mix(in srgb, var(--ink) 44%, var(--paper));
+    --panel:    color-mix(in srgb, var(--ink) 3.5%, var(--paper));
+    --warn-bg:  color-mix(in srgb, var(--warn) 9%, var(--paper));
+    --good-bg:  color-mix(in srgb, var(--good) 10%, var(--paper));
+    --row-hover: color-mix(in srgb, var(--accent) 4%, var(--paper));
+    --section-rule: color-mix(in srgb, var(--ink) 32%, var(--paper));
+
+    --display: Charter, "Iowan Old Style", Palatino, Georgia, serif;
+    --sans: system-ui, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html {
+    background: var(--paper);
+    scroll-behavior: smooth;
+    scroll-padding-top: 72px; /* clear the sticky jump-nav */
+  }
+  body {
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.45;
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .shell { max-width: 1360px; margin: 0 auto; padding: 0 32px 72px; }
+
+  /* ---- links & focus ---- */
+  a { color: var(--accent); text-decoration: none; border-radius: 2px; }
+  a:hover { text-decoration: underline; text-underline-offset: 2px; }
+  a:focus-visible,
+  summary:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    text-decoration: none;
+  }
+
+  .mono { font-family: var(--mono); font-size: 0.93em; }
+  .num  { font-variant-numeric: tabular-nums; }
+
+  .microlabel {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+
+  /* ---- masthead + fleet lead ---- */
+  .masthead {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding: 20px 0 14px;
+    border-bottom: 1px solid var(--hairline);
+  }
+  .masthead .brand {
+    font-size: 12px;
+    font-weight: 650;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .masthead .direction { font-size: 12px; color: var(--ink-3); }
+
+  .lead {
+    margin-top: 34px;
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: 31px;
+    line-height: 1.25;
+    letter-spacing: -0.005em;
+    color: var(--ink);
+    text-wrap: balance;
+    max-width: 26em;
+  }
+  .lead .gone-quiet { color: var(--warn); }
+
+  .fleet-meta {
+    margin-top: 12px;
+    margin-bottom: 26px;
+    font-size: 13px;
+    color: var(--ink-2);
+    font-variant-numeric: tabular-nums;
+  }
+  .fleet-meta .sep { color: var(--ink-3); margin: 0 7px; }
+  .fleet-meta .warn-word { color: var(--warn); font-weight: 600; }
+
+  /* ---- sticky jump-nav (the project selector in this IA) ---- */
+  .jumpnav {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: color-mix(in srgb, var(--paper) 94%, transparent);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    border-top: 1px solid var(--hairline);
+    border-bottom: 1px solid var(--hairline);
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 10px 2px;
+  }
+  .jumpnav .jn-label {
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-right: 10px;
+  }
+  .jumpnav a.jn-link {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 3px 12px 4px;
+    border-radius: 4px;
+    color: var(--ink);
+    border: 1px solid transparent;
+  }
+  .jumpnav a.jn-link:hover { text-decoration: none; background: var(--row-hover); }
+  .jumpnav a.jn-link.active {
+    background: var(--panel);
+    border-color: var(--hairline);
+  }
+  .jumpnav .jn-name {
+    font-family: var(--display);
+    font-size: 15.5px;
+    line-height: 1;
+  }
+  .jumpnav .jn-note {
+    font-size: 11px;
+    color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .jumpnav .jn-note.warn { color: var(--warn); }
+  .jumpnav a.jn-link.dormant .jn-name { color: var(--ink-3); }
+
+  /* ---- health dots ---- */
+  .dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    vertical-align: 0;
+    margin-right: 7px;
+    flex: none;
+  }
+  .dot-good { background: var(--good); }
+  .dot-warn { background: var(--warn); }
+  .dot-crit { background: var(--crit); }
+  .dot-none { background: transparent; border: 1.5px dashed var(--ink-3); width: 7px; height: 7px; }
+  .jumpnav .dot { width: 7px; height: 7px; margin-right: 0; align-self: center; }
+
+  /* ---- status word ---- */
+  .status {
+    display: inline-flex;
+    align-items: center;
+    font-size: 11px;
+    font-weight: 650;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+  }
+  .status-good { color: var(--good); }
+  .status-crit { color: var(--crit); }
+  .status-none { color: var(--ink-3); font-weight: 550; }
+
+  /* ---- project sections ---- */
+  .project {
+    margin-top: 56px;
+    border-top: 3px solid var(--section-rule);
+    padding-top: 18px;
+  }
+  .project:first-of-type { margin-top: 44px; }
+
+  .project-head {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .project-name {
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: 26px;
+    line-height: 1.15;
+    letter-spacing: -0.005em;
+  }
+  .project-name a { color: var(--ink); }
+  .project-name a:hover { color: var(--accent); }
+  .project-head .repo { font-family: var(--mono); font-size: 12.5px; }
+  .project-head .proj-summary {
+    margin-left: auto;
+    font-size: 13px;
+    color: var(--ink-2);
+    font-variant-numeric: tabular-nums;
+  }
+  .project-head .proj-summary .warn-word { color: var(--warn); font-weight: 600; }
+
+  /* ---- tower band ---- */
+  .tower {
+    margin-top: 16px;
+    border: 1px solid var(--hairline);
+    background: var(--panel);
+    border-radius: 6px;
+    padding: 13px 20px 14px;
+    display: flex;
+    align-items: center;
+    gap: 36px;
+    flex-wrap: wrap;
+  }
+  .tower .tower-id { display: flex; align-items: center; gap: 10px; min-width: 118px; }
+  .tower .tower-id .microlabel { color: var(--ink-2); }
+  .tower dl { display: flex; gap: 36px; flex-wrap: wrap; margin: 0; }
+  .tower dt {
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-bottom: 2px;
+  }
+  .tower dd { font-size: 13px; font-variant-numeric: tabular-nums; }
+  .tower .drift-note {
+    font-size: 12px;
+    color: var(--warn);
+    background: var(--warn-bg);
+    border: 1px solid color-mix(in srgb, var(--warn) 26%, var(--paper));
+    border-radius: 4px;
+    padding: 2px 8px;
+    white-space: nowrap;
+  }
+  .tower .sync-note { font-size: 12px; color: var(--ink-3); white-space: nowrap; }
+  .tower .reported { margin-left: auto; font-size: 12px; color: var(--ink-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .fresh-tick { color: var(--good); }
+  .tower .reported .stale-age { color: var(--warn); font-weight: 650; }
+  .dirty { color: var(--warn); font-weight: 600; font-size: 11.5px; }
+  .clean-mark { color: var(--ink-3); font-size: 11.5px; }
+
+  /* ---- flights grid (Manifest anatomy) ---- */
+  .manifest { margin-top: 22px; }
+  .manifest-caption {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .manifest-caption h3 { font-size: 13px; font-weight: 650; letter-spacing: 0.02em; }
+  .manifest-caption .count { font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+
+  .grid-head, .flight-main {
+    display: grid;
+    grid-template-columns: 118px 172px 1fr 250px minmax(210px, 0.8fr) 128px;
+    column-gap: 20px;
+    align-items: center;
+  }
+  .grid-head {
+    padding: 0 16px 8px;
+    border-bottom: 1px solid var(--hairline);
+  }
+  .grid-head .col-reported { text-align: right; }
+
+  .flight {
+    border-bottom: 1px solid var(--hairline);
+    border-left: 3px solid transparent;
+  }
+  .flight.is-stale { border-left-color: var(--warn); background: color-mix(in srgb, var(--warn) 3%, var(--paper)); }
+  .flight.is-silent { border-left-color: var(--hairline); background: color-mix(in srgb, var(--ink) 1.5%, var(--paper)); }
+
+  .flight-main { min-height: 52px; padding: 8px 16px 8px 13px; }
+  .flight-main:hover { background: var(--row-hover); }
+  .flight.is-stale .flight-main:hover,
+  .flight.is-silent .flight-main:hover { background: transparent; }
+
+  .cell-flight { font-weight: 600; font-size: 13.5px; letter-spacing: -0.005em; }
+  .cell-flight a { color: var(--ink); }
+  .cell-flight a:hover { color: var(--accent); }
+
+  .cell-branch { font-size: 12.5px; min-width: 0; }
+  .cell-branch .branch { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cell-branch .position {
+    display: block;
+    margin-top: 2px;
+    font-size: 12px;
+    color: var(--ink-2);
+    font-variant-numeric: tabular-nums;
+  }
+  .pos-behind.pos-heavy { color: var(--warn); font-weight: 600; }
+
+  .cell-env { font-size: 12.5px; white-space: nowrap; }
+  .cell-env .env-sep { color: var(--ink-3); margin: 0 6px; }
+  .cell-env .proc { display: block; margin-top: 2px; font-size: 11.5px; color: var(--ink-3); }
+
+  .cell-pr { font-size: 12.5px; min-width: 0; }
+  .cell-pr .pr-title {
+    display: block;
+    color: var(--ink-2);
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-top: 1px;
+  }
+  .pr-state {
+    display: inline-block;
+    font-size: 10.5px;
+    font-weight: 650;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    border-radius: 3px;
+    padding: 0.5px 5px;
+    margin-left: 6px;
+    vertical-align: 1px;
+  }
+  .pr-open  { color: var(--good); background: var(--good-bg); }
+  .pr-draft { color: var(--ink-2); background: color-mix(in srgb, var(--ink) 7%, var(--paper)); }
+  .no-pr { color: var(--ink-3); font-size: 12px; }
+
+  .cell-reported { text-align: right; font-size: 12.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .stale-badge, .silent-badge {
+    display: inline-block;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    border-radius: 3px;
+    padding: 1px 6px;
+    margin-left: 7px;
+  }
+  .stale-badge {
+    color: var(--warn);
+    background: var(--warn-bg);
+    border: 1px solid color-mix(in srgb, var(--warn) 30%, var(--paper));
+  }
+  .stale-age { color: var(--warn); font-weight: 650; }
+  .aging-age { color: var(--warn); }
+  .aging-note {
+    display: inline-block;
+    margin-left: 7px;
+    font-size: 10.5px;
+    font-weight: 650;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--warn);
+  }
+  .silent-badge {
+    color: var(--ink-3);
+    background: transparent;
+    border: 1px dashed var(--ink-3);
+  }
+  .silent-cell { color: var(--ink-3); font-style: italic; }
+  .flight.is-silent .cell-branch .position,
+  .flight.is-silent .cell-env { color: var(--ink-3); }
+
+  /* ---- commits disclosure ---- */
+  details.commits { padding: 0 16px 0 13px; }
+  details.commits summary {
+    list-style: none;
+    cursor: pointer;
+    font-size: 11px;
+    color: var(--ink-3);
+    padding: 0 0 8px;
+    margin-top: -2px;
+    letter-spacing: 0.04em;
+    display: inline-block;
+    border-radius: 2px;
+  }
+  details.commits summary::-webkit-details-marker { display: none; }
+  details.commits summary::before { content: "▸ "; font-size: 9px; }
+  details.commits[open] summary::before { content: "▾ "; }
+  details.commits summary:hover { color: var(--accent); }
+  .commit-list { padding: 2px 0 12px 18px; }
+  .commit-list li {
+    list-style: none;
+    font-size: 12px;
+    color: var(--ink-2);
+    padding: 2px 0;
+  }
+  .commit-list .sha { margin-right: 10px; }
+
+  /* ---- loose ends, inline per project ---- */
+  .loose {
+    margin-top: 18px;
+    max-width: 720px;
+  }
+  .loose h3 {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-bottom: 6px;
+  }
+  .loose h3 .count { font-weight: 400; margin-left: 6px; font-variant-numeric: tabular-nums; }
+  .loose-list li {
+    list-style: none;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--hairline);
+    font-size: 13px;
+  }
+  .loose-list li:last-child { border-bottom: none; }
+  .loose-list .tick {
+    flex: none;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--warn);
+    position: relative;
+    top: -1px;
+  }
+  .loose-list .text { flex: 1; min-width: 0; }
+  .loose-list .meta { flex: none; font-size: 11.5px; color: var(--ink-3); white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+  /* ---- dormant project (helios-docs): the whole section drops contrast.
+         Local token remap — every derived color follows automatically.
+         The notice band opts back out to stay fully legible. ---- */
+  .project.dormant .project-body {
+    --ink: #6E685F;
+    --accent: color-mix(in srgb, #0F5E5B 55%, #FAF9F6);
+    --good: color-mix(in srgb, #2F7D4F 55%, #FAF9F6);
+    --crit: color-mix(in srgb, #C03A2E 50%, #FAF9F6);
+  }
+  .project.dormant .project-name a { color: var(--ink-2); }
+  .project.dormant .project-name a:hover { color: var(--accent); }
+  .dormant-note {
+    margin-top: 14px;
+    border: 1px solid color-mix(in srgb, var(--warn) 28%, var(--paper));
+    background: var(--warn-bg);
+    border-radius: 6px;
+    padding: 9px 16px;
+    font-size: 13px;
+    color: color-mix(in srgb, var(--warn) 82%, var(--ink));
+  }
+  .dormant-note b { font-weight: 650; }
+
+  /* ---- global activity ---- */
+  .activity {
+    margin-top: 64px;
+    border-top: 3px solid var(--section-rule);
+    padding-top: 18px;
+  }
+  .activity-head { display: flex; align-items: baseline; gap: 14px; }
+  .activity-head h2 {
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: 22px;
+    letter-spacing: -0.005em;
+  }
+  .activity-head .note { font-size: 12px; color: var(--ink-3); }
+
+  .activity-list { margin-top: 14px; max-width: 980px; }
+  .activity-list li {
+    list-style: none;
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--hairline);
+    font-size: 13px;
+  }
+  .activity-list li:first-child { border-top: 1px solid var(--hairline); }
+  .evt {
+    flex: none;
+    width: 78px;
+    font-size: 10.5px;
+    font-weight: 650;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .evt-takeoff  { color: var(--accent); }
+  .evt-landing  { color: var(--good); }
+  .evt-scrub    { color: var(--ink-3); }
+  .evt-pr       { color: var(--ink-2); }
+  .evt-release  { color: var(--warn); }
+  .proj-tag {
+    flex: none;
+    width: 88px;
+    font-size: 10.5px;
+    font-weight: 550;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .activity-list .text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-2); }
+  .activity-list .text b { color: var(--ink); font-weight: 600; }
+  .activity-list .age { flex: none; font-size: 11.5px; color: var(--ink-3); font-variant-numeric: tabular-nums; width: 34px; text-align: right; }
+  .activity-list li.from-dormant .text,
+  .activity-list li.from-dormant .text b,
+  .activity-list li.from-dormant .evt { color: var(--ink-3); }
+  .activity-list li.from-dormant a { color: color-mix(in srgb, var(--accent) 55%, var(--paper)); }
+
+  footer {
+    margin-top: 56px;
+    padding-top: 14px;
+    border-top: 1px solid var(--hairline);
+    font-size: 12px;
+    color: var(--ink-3);
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  /* ---- responsive degrade ---- */
+  @media (max-width: 1080px) {
+    .grid-head, .flight-main { grid-template-columns: 110px 150px 1fr 210px 120px; }
+    .col-pr, .cell-pr { display: none; }
+  }
+  @media (max-width: 960px) {
+    .project-head .proj-summary { margin-left: 0; width: 100%; }
+    .tower { gap: 22px; }
+    .tower .reported { margin-left: 0; }
+    .jumpnav { overflow-x: auto; }
+  }
+  @media (max-width: 760px) {
+    .grid-head { display: none; }
+    .flight-main { grid-template-columns: 1fr 1fr; row-gap: 6px; padding: 12px 16px 8px 13px; }
+    .cell-reported { text-align: left; }
+    .proj-tag { display: none; }
+  }
+</style>
+
+<div class="shell">
+
+  <header class="masthead">
+    <span class="brand">Flight Rules</span>
+    <span class="direction">Direction 3 — Terminals: one page, every project a terminal; navigate by section.</span>
+  </header>
+
+  <h1 class="lead">Eight flights across three projects. <span class="gone-quiet">helios-docs has gone quiet.</span></h1>
+
+  <p class="fleet-meta num">
+    3 projects<span class="sep">·</span>8 flights on the board<span class="sep">·</span>3 listening<span class="sep">·</span>4 down<span class="sep">·</span><span class="warn-word">1 never reported</span><span class="sep">·</span><span class="warn-word">2 stale reports</span><span class="sep">·</span><span class="warn-word">1 project stale</span><span class="sep">·</span>5 open PRs (2 draft)
+  </p>
+
+  <!-- ============ STICKY JUMP-NAV (project selector) ============ -->
+  <nav class="jumpnav" aria-label="Projects">
+    <span class="jn-label">Terminals</span>
+    <a class="jn-link" href="#skyway">
+      <span class="dot dot-warn" aria-hidden="true"></span>
+      <span class="jn-name">skyway</span>
+      <span class="jn-note">5 flights</span>
+    </a>
+    <a class="jn-link" href="#copperline">
+      <span class="dot dot-good" aria-hidden="true"></span>
+      <span class="jn-name">copperline</span>
+      <span class="jn-note">2 flights</span>
+    </a>
+    <a class="jn-link dormant" href="#helios-docs">
+      <span class="dot dot-none" aria-hidden="true"></span>
+      <span class="jn-name">helios-docs</span>
+      <span class="jn-note warn">quiet 2d</span>
+    </a>
+  </nav>
+
+  <!-- ==================================================================
+       PROJECT · skyway
+       ================================================================== -->
+  <section class="project" id="skyway" aria-label="Project skyway">
+    <div class="project-head">
+      <h2 class="project-name"><a href="#skyway">skyway</a></h2>
+      <a class="repo" href="#">skyway/skyway-app</a>
+      <p class="proj-summary">
+        5 flights · 2 listening · 2 down ·
+        <span class="warn-word">1 stale</span> ·
+        <span class="warn-word">1 no report</span> ·
+        3 PRs (1 draft)
+      </p>
+    </div>
+
+    <div class="project-body">
+      <!-- tower -->
+      <div class="tower" role="group" aria-label="skyway tower">
+        <div class="tower-id">
+          <span class="microlabel">Tower</span>
+          <a class="mono" href="#">main</a>
+        </div>
+        <dl>
+          <div>
+            <dt>Worktree</dt>
+            <dd><span class="clean-mark">clean</span> · <span class="num">0</span> unpushed</dd>
+          </div>
+          <div>
+            <dt>Dev</dt>
+            <dd><a class="mono" href="#">v3.42.0</a></dd>
+          </div>
+          <div>
+            <dt>Prod</dt>
+            <dd><a class="mono" href="#">v3.41.2</a></dd>
+          </div>
+          <div>
+            <dt>Version drift</dt>
+            <dd><span class="drift-note">prod is one release behind</span></dd>
+          </div>
+        </dl>
+        <span class="reported"><span class="fresh-tick">●</span> reported 40s ago</span>
+      </div>
+
+      <!-- flights -->
+      <div class="manifest">
+        <div class="manifest-caption">
+          <h3>Flights</h3>
+          <span class="count">5 worktrees · ports 4101–4105 · positions vs <span class="mono">main</span></span>
+        </div>
+
+        <div class="grid-head microlabel" aria-hidden="true">
+          <span>Status</span>
+          <span>Flight</span>
+          <span>Branch · Position</span>
+          <span>Env</span>
+          <span class="col-pr">PR</span>
+          <span class="col-reported">Reported</span>
+        </div>
+
+        <!-- checkout-redesign -->
+        <article class="flight">
+          <div class="flight-main">
+            <span class="status status-good"><span class="dot dot-good"></span>LISTENING</span>
+            <span class="cell-flight"><a href="#">checkout-redesign</a></span>
+            <span class="cell-branch">
+              <a class="mono branch" href="#">feat/checkout-redesign</a>
+              <span class="position num">↑4 ↓1 · <span class="clean-mark">clean</span></span>
+            </span>
+            <span class="cell-env">
+              <a class="mono" href="#">:4101</a><span class="env-sep">·</span><a class="mono" href="#">brisk-otter-421</a>
+              <span class="proc">node</span>
+            </span>
+            <span class="cell-pr">
+              <a class="mono" href="#">#142</a><span class="pr-state pr-open">open</span>
+              <span class="pr-title">Checkout redesign: new payment sheet</span>
+            </span>
+            <span class="cell-reported">40s ago</span>
+          </div>
+          <details class="commits">
+            <summary>last 3 commits</summary>
+            <ul class="commit-list">
+              <li><a class="mono sha" href="#">a41f2c9</a>feat(checkout): wire payment sheet to vault</li>
+              <li><a class="mono sha" href="#">9c02b11</a>feat(checkout): skeleton payment sheet</li>
+              <li><a class="mono sha" href="#">77d31e0</a>chore: split checkout routes</li>
+            </ul>
+          </details>
+        </article>
+
+        <!-- rate-limiter -->
+        <article class="flight">
+          <div class="flight-main">
+            <span class="status status-crit"><span class="dot dot-crit"></span>NOT LISTENING</span>
+            <span class="cell-flight"><a href="#">rate-limiter</a></span>
+            <span class="cell-branch">
+              <a class="mono branch" href="#">fix/api-rate-limits</a>
+              <span class="position num">↑9 ↓6 · <span class="dirty">3 dirty files</span></span>
+            </span>
+            <span class="cell-env">
+              <a class="mono" href="#">:4102</a><span class="env-sep">·</span><a class="mono" href="#">calm-heron-77</a>
+            </span>
+            <span class="cell-pr">
+              <a class="mono" href="#">#139</a><span class="pr-state pr-draft">draft</span>
+              <span class="pr-title">Token-bucket rate limiting for public API</span>
+            </span>
+            <span class="cell-reported">2m ago</span>
+          </div>
+          <details class="commits">
+            <summary>last 3 commits</summary>
+            <ul class="commit-list">
+              <li><a class="mono sha" href="#">5b8e0d2</a>fix(api): burst allowance for authenticated clients</li>
+              <li><a class="mono sha" href="#">e11a9c4</a>test(api): rate-limit integration harness</li>
+              <li><a class="mono sha" href="#">0f6b7aa</a>fix(api): 429 retry-after headers</li>
+            </ul>
+          </details>
+        </article>
+
+        <!-- search-facets -->
+        <article class="flight">
+          <div class="flight-main">
+            <span class="status status-good"><span class="dot dot-good"></span>LISTENING</span>
+            <span class="cell-flight"><a href="#">search-facets</a></span>
+            <span class="cell-branch">
+              <a class="mono branch" href="#">feat/search-facets</a>
+              <span class="position num">↑12 ↓0 · <span class="clean-mark">clean</span></span>
+            </span>
+            <span class="cell-env">
+              <a class="mono" href="#">:4103</a><span class="env-sep">·</span><a class="mono" href="#">noble-crane-303</a>
+              <span class="proc">node</span>
+            </span>
+            <span class="cell-pr">
+              <a class="mono" href="#">#144</a><span class="pr-state pr-open">open</span>
+              <span class="pr-title">Faceted search filters</span>
+            </span>
+            <span class="cell-reported">55s ago</span>
+          </div>
+          <details class="commits">
+            <summary>last 3 commits</summary>
+            <ul class="commit-list">
+              <li><a class="mono sha" href="#">c9d4e88</a>feat(search): facet counts endpoint</li>
+              <li><a class="mono sha" href="#">2a7b910</a>feat(search): filter chips UI</li>
+              <li><a class="mono sha" href="#">88c1f02</a>refactor(search): extract query builder</li>
+            </ul>
+          </details>
+        </article>
+
+        <!-- onboarding-copy (STALE) -->
+        <article class="flight is-stale">
+          <div class="flight-main">
+            <span class="status status-crit"><span class="dot dot-crit"></span>NOT LISTENING</span>
+            <span class="cell-flight"><a href="#">onboarding-copy</a></span>
+            <span class="cell-branch">
+              <a class="mono branch" href="#">chore/onboarding-copy</a>
+              <span class="position num">↑2 <span class="pos-behind pos-heavy">↓14</span> · <span class="dirty">1 dirty file</span></span>
+            </span>
+            <span class="cell-env">
+              <a class="mono" href="#">:4104</a><span class="env-sep">·</span><a class="mono" href="#">quiet-finch-88</a>
+            </span>
+            <span class="cell-pr"><span class="no-pr">no PR</span></span>
+            <span class="cell-reported">
+              <span class="stale-age">38m ago</span><span class="stale-badge">STALE</span>
+            </span>
+          </div>
+          <details class="commits">
+            <summary>last 3 commits</summary>
+            <ul class="commit-list">
+              <li><a class="mono sha" href="#">b3a0c77</a>chore(onboarding): welcome screen copy pass</li>
+              <li><a class="mono sha" href="#">41d9e06</a>chore(onboarding): empty-state copy</li>
+              <li><a class="mono sha" href="#">d72f813</a>chore: rename tour steps</li>
+            </ul>
+          </details>
+        </article>
+
+        <!-- perf-budget (never reported) -->
+        <article class="flight is-silent">
+          <div class="flight-main">
+            <span class="status status-none"><span class="dot dot-none"></span>NO REPORT</span>
+            <span class="cell-flight"><a href="#">perf-budget</a></span>
+            <span class="cell-branch">
+              <a class="mono branch" href="#">feat/perf-budget-ci</a>
+              <span class="position silent-cell">position unknown</span>
+            </span>
+            <span class="cell-env">
+              <a class="mono" href="#">:4105</a><span class="env-sep">·</span><a class="mono" href="#">wry-egret-514</a>
+            </span>
+            <span class="cell-pr"><span class="no-pr">no PR</span></span>
+            <span class="cell-reported">
+              <span class="silent-cell">never</span><span class="silent-badge">NO REPORT YET</span>
+            </span>
+          </div>
+        </article>
+      </div>
+
+      <!-- loose ends -->
+      <div class="loose">
+        <h3>Loose ends<span class="count">3</span></h3>
+        <ul class="loose-list">
+          <li>
+            <span class="tick" aria-hidden="true"></span>
+            <span class="text">Flaky e2e: checkout retries fail on Safari</span>
+            <span class="meta">auto-fix run · 3h</span>
+          </li>
+          <li>
+            <span class="tick" aria-hidden="true"></span>
+            <span class="text">Bump Node to 22.12 before next release</span>
+            <span class="meta">ATC · 1d</span>
+          </li>
+          <li>
+            <span class="tick" aria-hidden="true"></span>
+            <span class="text">PR <a class="mono" href="#">#131</a> landed without a changelog entry</span>
+            <span class="meta">release notes · 2d</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================================================================
+       PROJECT · copperline
+       ================================================================== -->
+  <section class="project" id="copperline" aria-label="Project copperline">
+    <div class="project-head">
+      <h2 class="project-name"><a href="#copperline">copperline</a></h2>
+      <a class="repo" href="#">copperline/copperline-api</a>
+      <p class="proj-summary">
+        2 flights · 1 listening · 1 down ·
+        <span class="warn-word">1 report aging</span> ·
+        2 PRs (1 draft)
+      </p>
+    </div>
+
+    <div class="project-body">
+      <!-- tower -->
+      <div class="tower" role="group" aria-label="copperline tower">
+        <div class="tower-id">
+          <span class="microlabel">Tower</span>
+          <a class="mono" href="#">develop</a>
+        </div>
+        <dl>
+          <div>
+            <dt>Worktree</dt>
+            <dd><span class="dirty">2 dirty files</span> · <span class="num">1</span> unpushed</dd>
+          </div>
+          <div>
+            <dt>Dev</dt>
+            <dd><a class="mono" href="#">v0.9.3</a></dd>
+          </div>
+          <div>
+            <dt>Prod</dt>
+            <dd><a class="mono" href="#">v0.9.3</a></dd>
+          </div>
+          <div>
+            <dt>Version drift</dt>
+            <dd><span class="sync-note">dev and prod in sync</span></dd>
+          </div>
+        </dl>
+        <span class="reported"><span class="fresh-tick">●</span> reported 5m ago</span>
+      </div>
+
+      <!-- flights -->
+      <div class="manifest">
+        <div class="manifest-caption">
+          <h3>Flights</h3>
+          <span class="count">2 worktrees · ports 5201–5202 · positions vs <span class="mono">develop</span></span>
+        </div>
+
+        <div class="grid-head microlabel" aria-hidden="true">
+          <span>Status</span>
+          <span>Flight</span>
+          <span>Branch · Position</span>
+          <span>Env</span>
+          <span class="col-pr">PR</span>
+          <span class="col-reported">Reported</span>
+        </div>
+
+        <!-- webhook-retries -->
+        <article class="flight">
+          <div class="flight-main">
+            <span class="status status-good"><span class="dot dot-good"></span>LISTENING</span>
+            <span class="cell-flight"><a href="#">webhook-retries</a></span>
+            <span class="cell-branch">
+              <a class="mono branch" href="#">fix/webhook-retries</a>
+              <span class="position num">↑3 ↓0 · <span class="clean-mark">clean</span></span>
+            </span>
+            <span class="cell-env">
+              <a class="mono" href="#">:5201</a><span class="env-sep">·</span><a class="mono" href="#">mellow-bison-12</a>
+              <span class="proc">node</span>
+            </span>
+            <span class="cell-pr">
+              <a class="mono" href="#">#57</a><span class="pr-state pr-open">open</span>
+              <span class="pr-title">Retry webhooks with exponential backoff</span>
+            </span>
+            <span class="cell-reported">5m ago</span>
+          </div>
+          <details class="commits">
+            <summary>last 3 commits</summary>
+            <ul class="commit-list">
+              <li><a class="mono sha" href="#">7d1c3aa</a>fix(webhooks): exponential backoff with jitter</li>
+              <li><a class="mono sha" href="#">30e9b51</a>test(webhooks): delivery replay harness</li>
+              <li><a class="mono sha" href="#">f4a8c02</a>chore: extract delivery queue</li>
+            </ul>
+          </details>
+        </article>
+
+        <!-- billing-portal (aging) -->
+        <article class="flight">
+          <div class="flight-main">
+            <span class="status status-crit"><span class="dot dot-crit"></span>NOT LISTENING</span>
+            <span class="cell-flight"><a href="#">billing-portal</a></span>
+            <span class="cell-branch">
+              <a class="mono branch" href="#">feat/billing-portal</a>
+              <span class="position num">↑21 ↓4 · <span class="dirty">6 dirty files</span></span>
+            </span>
+            <span class="cell-env">
+              <a class="mono" href="#">:5202</a><span class="env-sep">·</span><a class="mono" href="#">stout-lynx-940</a>
+            </span>
+            <span class="cell-pr">
+              <a class="mono" href="#">#54</a><span class="pr-state pr-draft">draft</span>
+              <span class="pr-title">Self-serve billing portal</span>
+            </span>
+            <span class="cell-reported">
+              <span class="aging-age">1h ago</span><span class="aging-note">aging</span>
+            </span>
+          </div>
+          <details class="commits">
+            <summary>last 3 commits</summary>
+            <ul class="commit-list">
+              <li><a class="mono sha" href="#">91b2d6e</a>feat(billing): invoice history table</li>
+              <li><a class="mono sha" href="#">c55a1f9</a>feat(billing): plan change flow</li>
+              <li><a class="mono sha" href="#">2e7d940</a>feat(billing): customer portal shim</li>
+            </ul>
+          </details>
+        </article>
+      </div>
+
+      <!-- loose ends -->
+      <div class="loose">
+        <h3>Loose ends<span class="count">1</span></h3>
+        <ul class="loose-list">
+          <li>
+            <span class="tick" aria-hidden="true"></span>
+            <span class="text">Webhook delivery docs out of date</span>
+            <span class="meta">ATC · 4h</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================================================================
+       PROJECT · helios-docs (DORMANT — whole project stale)
+       ================================================================== -->
+  <section class="project dormant" id="helios-docs" aria-label="Project helios-docs">
+    <div class="project-head">
+      <h2 class="project-name"><a href="#helios-docs">helios-docs</a></h2>
+      <a class="repo" href="#">helios/helios-docs</a>
+      <p class="proj-summary">
+        1 flight · <span class="warn-word">nothing heard in 2d</span>
+      </p>
+    </div>
+
+    <p class="dormant-note">
+      <b>This project has gone quiet.</b> Nothing here — tower or flight — has reported
+      in 2 days. Everything below is what was last observed, not what is true now.
+    </p>
+
+    <div class="project-body">
+      <!-- tower -->
+      <div class="tower" role="group" aria-label="helios-docs tower">
+        <div class="tower-id">
+          <span class="microlabel">Tower</span>
+          <a class="mono" href="#">main</a>
+        </div>
+        <dl>
+          <div>
+            <dt>Worktree</dt>
+            <dd><span class="clean-mark">clean</span> · <span class="num">0</span> unpushed</dd>
+          </div>
+          <div>
+            <dt>Dev</dt>
+            <dd><a class="mono" href="#">v1.4.1</a></dd>
+          </div>
+          <div>
+            <dt>Prod</dt>
+            <dd><a class="mono" href="#">v1.4.1</a></dd>
+          </div>
+          <div>
+            <dt>Version drift</dt>
+            <dd><span class="sync-note">dev and prod in sync</span></dd>
+          </div>
+        </dl>
+        <span class="reported"><span class="stale-age">reported 2d ago</span></span>
+      </div>
+
+      <!-- flights -->
+      <div class="manifest">
+        <div class="manifest-caption">
+          <h3>Flights</h3>
+          <span class="count">1 worktree · port 6301 · positions vs <span class="mono">main</span></span>
+        </div>
+
+        <div class="grid-head microlabel" aria-hidden="true">
+          <span>Status</span>
+          <span>Flight</span>
+          <span>Branch · Position</span>
+          <span>Env</span>
+          <span class="col-pr">PR</span>
+          <span class="col-reported">Reported</span>
+        </div>
+
+        <!-- nav-redesign (stale) -->
+        <article class="flight is-stale">
+          <div class="flight-main">
+            <span class="status status-crit"><span class="dot dot-crit"></span>NOT LISTENING</span>
+            <span class="cell-flight"><a href="#">nav-redesign</a></span>
+            <span class="cell-branch">
+              <a class="mono branch" href="#">feat/nav-redesign</a>
+              <span class="position num">↑1 <span class="pos-behind pos-heavy">↓22</span> · <span class="clean-mark">clean</span></span>
+            </span>
+            <span class="cell-env">
+              <a class="mono" href="#">:6301</a><span class="env-sep">·</span><a class="mono" href="#">pale-swan-201</a>
+            </span>
+            <span class="cell-pr"><span class="no-pr">no PR</span></span>
+            <span class="cell-reported">
+              <span class="stale-age">2d ago</span><span class="stale-badge">STALE</span>
+            </span>
+          </div>
+          <details class="commits">
+            <summary>last 3 commits</summary>
+            <ul class="commit-list">
+              <li><a class="mono sha" href="#">5c0ff21</a>feat(nav): collapsible section tree</li>
+              <li><a class="mono sha" href="#">aa41d09</a>feat(nav): breadcrumbs</li>
+              <li><a class="mono sha" href="#">8b93e77</a>chore: sidebar design tokens</li>
+            </ul>
+          </details>
+        </article>
+      </div>
+      <!-- no loose ends for helios-docs: heading skipped -->
+    </div>
+  </section>
+
+  <!-- ==================================================================
+       GLOBAL ACTIVITY — stays merged across all projects, on purpose
+       ================================================================== -->
+  <section class="activity" aria-label="Activity, all projects">
+    <div class="activity-head">
+      <h2>Activity</h2>
+      <span class="note">all projects, newest first</span>
+    </div>
+    <ul class="activity-list">
+      <li>
+        <span class="evt evt-pr">PR opened</span>
+        <span class="proj-tag">skyway</span>
+        <span class="text"><a class="mono" href="#">#144</a> — Faceted search filters</span>
+        <span class="age">55s</span>
+      </li>
+      <li>
+        <span class="evt evt-takeoff">Takeoff</span>
+        <span class="proj-tag">skyway</span>
+        <span class="text"><b>perf-budget</b> · <a class="mono" href="#">feat/perf-budget-ci</a></span>
+        <span class="age">18m</span>
+      </li>
+      <li>
+        <span class="evt evt-landing">Landing</span>
+        <span class="proj-tag">skyway</span>
+        <span class="text"><b>image-cdn</b> · <a class="mono" href="#">#138</a> merged</span>
+        <span class="age">1h</span>
+      </li>
+      <li>
+        <span class="evt evt-pr">PR opened</span>
+        <span class="proj-tag">copperline</span>
+        <span class="text"><a class="mono" href="#">#57</a> — Retry webhooks with exponential backoff</span>
+        <span class="age">2h</span>
+      </li>
+      <li>
+        <span class="evt evt-pr">PR opened</span>
+        <span class="proj-tag">skyway</span>
+        <span class="text"><a class="mono" href="#">#142</a> — Checkout redesign: new payment sheet</span>
+        <span class="age">3h</span>
+      </li>
+      <li>
+        <span class="evt evt-takeoff">Takeoff</span>
+        <span class="proj-tag">copperline</span>
+        <span class="text"><b>webhook-retries</b> · <a class="mono" href="#">fix/webhook-retries</a></span>
+        <span class="age">3h</span>
+      </li>
+      <li>
+        <span class="evt evt-release">Release</span>
+        <span class="proj-tag">skyway</span>
+        <span class="text"><a class="mono" href="#">v3.42.0</a> cut from <a class="mono" href="#">main</a></span>
+        <span class="age">5h</span>
+      </li>
+      <li>
+        <span class="evt evt-takeoff">Takeoff</span>
+        <span class="proj-tag">skyway</span>
+        <span class="text"><b>checkout-redesign</b> · <a class="mono" href="#">feat/checkout-redesign</a></span>
+        <span class="age">6h</span>
+      </li>
+      <li>
+        <span class="evt evt-scrub">Scrub</span>
+        <span class="proj-tag">skyway</span>
+        <span class="text"><b>dark-mode-spike</b> · exploration only</span>
+        <span class="age">1d</span>
+      </li>
+      <li>
+        <span class="evt evt-takeoff">Takeoff</span>
+        <span class="proj-tag">skyway</span>
+        <span class="text"><b>search-facets</b> · <a class="mono" href="#">feat/search-facets</a></span>
+        <span class="age">1d</span>
+      </li>
+      <li>
+        <span class="evt evt-pr">PR opened</span>
+        <span class="proj-tag">skyway</span>
+        <span class="text"><a class="mono" href="#">#139</a> — Token-bucket rate limiting for public API</span>
+        <span class="age">2d</span>
+      </li>
+      <li>
+        <span class="evt evt-takeoff">Takeoff</span>
+        <span class="proj-tag">skyway</span>
+        <span class="text"><b>rate-limiter</b> · <a class="mono" href="#">fix/api-rate-limits</a></span>
+        <span class="age">2d</span>
+      </li>
+      <li>
+        <span class="evt evt-takeoff">Takeoff</span>
+        <span class="proj-tag">copperline</span>
+        <span class="text"><b>billing-portal</b> · <a class="mono" href="#">feat/billing-portal</a></span>
+        <span class="age">2d</span>
+      </li>
+      <li>
+        <span class="evt evt-release">Release</span>
+        <span class="proj-tag">copperline</span>
+        <span class="text"><a class="mono" href="#">v0.9.3</a> cut from <a class="mono" href="#">develop</a></span>
+        <span class="age">3d</span>
+      </li>
+      <li class="from-dormant">
+        <span class="evt evt-takeoff">Takeoff</span>
+        <span class="proj-tag">helios-docs</span>
+        <span class="text"><b>nav-redesign</b> · <a class="mono" href="#">feat/nav-redesign</a></span>
+        <span class="age">6d</span>
+      </li>
+    </ul>
+  </section>
+
+  <footer>
+    <span>All data is reported observation — freshness shown per flight and per tower.</span>
+    <span>Flight Rules · terminals view</span>
+  </footer>
+
+</div>
+
+<script>
+  // Scroll-spy: mark the project section currently in view on the jump-nav.
+  // Navigation itself is pure anchors; this only decorates.
+  (function () {
+    var links = Array.prototype.slice.call(document.querySelectorAll('.jumpnav a.jn-link'));
+    var byId = {};
+    links.forEach(function (a) { byId[a.getAttribute('href').slice(1)] = a; });
+
+    var visible = {};
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) { visible[e.target.id] = e.isIntersecting; });
+      var first = null;
+      document.querySelectorAll('section.project').forEach(function (s) {
+        if (!first && visible[s.id]) first = s.id;
+      });
+      links.forEach(function (a) { a.classList.remove('active'); });
+      if (first && byId[first]) byId[first].classList.add('active');
+    }, { rootMargin: '-64px 0px -55% 0px', threshold: 0 });
+
+    document.querySelectorAll('section.project').forEach(function (s) { observer.observe(s); });
+  })();
+</script>
+
+<!-- Variant Navigation -->
+<nav class="variant-nav" aria-label="Design variants">
+  <a href="01-hangar.html">1</a>
+  <a href="02-concourse.html">2</a>
+  <a href="03-terminals.html" class="active" aria-current="page">3</a>
+  <a href="04-atc.html">4</a>
+  <a href="05-approach.html">5</a>
+</nav>
+<style>
+  .variant-nav { position: fixed; bottom: 24px; right: 24px; display: flex; gap: 4px; padding: 6px; background: rgba(20,20,20,0.55); backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%); border-radius: 20px; border: 1px solid rgba(255,255,255,0.15); box-shadow: 0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.1), inset 0 0.5px 0 rgba(255,255,255,0.2); z-index: 2147483647; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; transition: opacity 0.3s ease; }
+  .variant-nav:hover { background: rgba(20,20,20,0.7); }
+  .variant-nav a { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 12px; text-decoration: none; font-size: 14px; font-weight: 500; letter-spacing: -0.01em; color: rgba(255,255,255,0.7); text-shadow: 0 1px 3px rgba(0,0,0,0.4); transition: all 0.2s cubic-bezier(0.4,0,0.2,1); background: transparent; border: 1px solid transparent; }
+  .variant-nav a:hover { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.95); border-color: rgba(255,255,255,0.08); }
+  .variant-nav a.active { background: rgba(255,255,255,0.2); color: #fff; font-weight: 600; border-color: rgba(255,255,255,0.15); box-shadow: 0 2px 8px rgba(0,0,0,0.15), inset 0 0.5px 0 rgba(255,255,255,0.25); }
+</style>

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Flight Rules — multi-project board prototypes (round 2)</title>
+<style>
+  :root {
+    --ink: #26221c;
+    --muted: #75705f;
+    --line: #e7e3da;
+    --accent: #1f4d63;
+    --ground: #faf8f4;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    font: 15px/1.6 system-ui, -apple-system, sans-serif;
+    color: var(--ink);
+    background: var(--ground);
+    max-width: 46rem;
+    margin: 0 auto;
+    padding: 4rem 1.5rem;
+  }
+  h1 { font-size: 1.4rem; letter-spacing: -0.01em; font-family: Charter, Georgia, serif; }
+  p.sub { color: var(--muted); margin: 0.4rem 0 2.2rem; }
+  ol { list-style: none; padding: 0; }
+  li { border-top: 1px solid var(--line); }
+  li:last-child { border-bottom: 1px solid var(--line); }
+  a.row {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    padding: 1rem 0.25rem;
+    text-decoration: none;
+    color: inherit;
+  }
+  a.row:hover .name, a.row:focus-visible .name { color: var(--accent); text-decoration: underline; }
+  a.row:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .num { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted); font-size: 0.85rem; }
+  .name { font-weight: 600; }
+  .desc { color: var(--muted); font-size: 0.9rem; margin-left: auto; text-align: right; max-width: 60%; }
+  p.back { margin-top: 2rem; }
+  p.back a { color: var(--accent); }
+</style>
+</head>
+<body>
+<h1>Multi-project board — round 2</h1>
+<p class="sub">One design family (Manifest layout, Briefing warmth); each variant answers "project view vs all flights" differently.</p>
+<ol>
+  <li><a class="row" href="01-hangar.html"><span class="num">01</span><span class="name">Hangar</span><span class="desc">projects home page → project board (always project-specific)</span></a></li>
+  <li><a class="row" href="02-concourse.html"><span class="num">02</span><span class="name">Concourse</span><span class="desc">one global flights table, project column + filter chips</span></a></li>
+  <li><a class="row" href="03-terminals.html"><span class="num">03</span><span class="name">Terminals</span><span class="desc">one page, stacked per-project sections with jump nav</span></a></li>
+  <li><a class="row" href="04-atc.html"><span class="num">04</span><span class="name">ATC</span><span class="desc">persistent project rail, instant switching + overview pane</span></a></li>
+  <li><a class="row" href="05-approach.html"><span class="num">05</span><span class="name">Approach</span><span class="desc">project summary tiles over one grouped table, focus on click</span></a></li>
+</ol>
+<p class="back"><a href="../index.html">← Round 1 (visual directions)</a></p>
+</body>
+</html>

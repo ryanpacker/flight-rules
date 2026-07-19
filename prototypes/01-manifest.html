@@ -1,0 +1,714 @@
+<!--
+  ============================================================================
+  FLIGHT RULES — Direction 1 of 5: "MANIFEST"
+  Dense operations table. Light theme, committed.
+
+  TOKEN PLAN (followed exactly below)
+
+  Colors (6 named hexes, everything derived from these):
+    --paper    #FAFBFC   page ground, paper-white with a barely-cool bias
+    --ink      #1A1D23   near-black ink; secondary text derived at 62% mix
+    --hairline #E4E7EC   all rules, row separators, borders (cool gray, not #ccc)
+    --accent   #0E6E8C   the ONE interactive hue — deep sea-teal, links + focus
+    --good     #3D8A50   muted semantic green (listening)
+    --warn     #A87614   muted semantic amber (stale, dirty, drift)
+    plus one derived critical red, --crit #B5443C, mixed to stay muted.
+    Semantic colors never appear on links; accent never encodes health.
+
+  Type roles:
+    UI text:      system-ui, "Segoe UI", "Helvetica Neue", Arial, sans-serif
+                  — 14px base, 13px table body, 11px letter-spaced caps headers
+    Identifiers:  ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas,
+                  monospace — branches, ports, deployments, PR#, shas, versions.
+                  Mono is used ONLY for identifiers, never for prose.
+    Digits that align (ahead/behind, ages): tabular-nums.
+
+  Layout:
+    1360px max shell, 32px gutters. Slim header (name + plain-language summary,
+    hairline below). Tower = a distinct summary band (definition-list strip on
+    a faintly tinted panel), NOT a table row. Flights = one full-width grid,
+    row height 52px, hairline separators, columns:
+      [status 118px] [flight 172px] [branch+position 1fr] [env 250px]
+      [pr minmax(210px,0.8fr)] [reported 118px right]
+    Each flight row carries a 3px left state stripe (transparent when fresh,
+    amber when stale, dashed-gray when never reported). Last commits live in a
+    per-row <details> disclosure (no JS). Below the table: two-column band,
+    loose ends (5fr) | activity (7fr), activity entries one-liners with small
+    typed labels. Degrades to stacked layout under 960px.
+  ============================================================================
+-->
+<title>Flight Rules — skyway · Manifest</title>
+<style>
+  /* ---- tokens ---- */
+  :root {
+    --paper:    #FAFBFC;
+    --ink:      #1A1D23;
+    --hairline: #E4E7EC;
+    --accent:   #0E6E8C;
+    --good:     #3D8A50;
+    --warn:     #A87614;
+    --crit:     #B5443C;
+
+    /* derived */
+    --ink-2:  color-mix(in srgb, var(--ink) 62%, var(--paper));   /* secondary text */
+    --ink-3:  color-mix(in srgb, var(--ink) 44%, var(--paper));   /* faint text */
+    --panel:  color-mix(in srgb, var(--ink) 3%, var(--paper));    /* tower band fill */
+    --warn-bg: color-mix(in srgb, var(--warn) 9%, var(--paper));
+    --good-bg: color-mix(in srgb, var(--good) 10%, var(--paper));
+    --crit-bg: color-mix(in srgb, var(--crit) 9%, var(--paper));
+    --row-hover: color-mix(in srgb, var(--accent) 4%, var(--paper));
+
+    --sans: system-ui, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { background: var(--paper); }
+  body {
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.45;
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .shell { max-width: 1360px; margin: 0 auto; padding: 0 32px 64px; }
+
+  /* ---- links & focus ---- */
+  a { color: var(--accent); text-decoration: none; border-radius: 2px; }
+  a:hover { text-decoration: underline; text-underline-offset: 2px; }
+  a:focus-visible,
+  summary:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    text-decoration: none;
+  }
+
+  .mono { font-family: var(--mono); font-size: 0.93em; }
+  .num  { font-variant-numeric: tabular-nums; }
+
+  /* ---- small-caps column/section label style ---- */
+  .microlabel {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+
+  /* ---- header ---- */
+  header {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding: 22px 0 16px;
+    border-bottom: 1px solid var(--hairline);
+  }
+  header h1 {
+    font-size: 17px;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+  }
+  header h1 .sep { color: var(--ink-3); font-weight: 400; margin: 0 6px; }
+  header .repo { font-family: var(--mono); font-size: 12.5px; }
+  header .summary {
+    margin-left: auto;
+    font-size: 13px;
+    color: var(--ink-2);
+    font-variant-numeric: tabular-nums;
+  }
+  header .summary .warn-word { color: var(--warn); font-weight: 600; }
+  .subtitle {
+    padding: 6px 0 0;
+    font-size: 12px;
+    color: var(--ink-3);
+  }
+
+  /* ---- health dot ---- */
+  .dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    vertical-align: 0;
+    margin-right: 7px;
+  }
+  .dot-good { background: var(--good); }
+  .dot-crit { background: var(--crit); }
+  .dot-none { background: transparent; border: 1.5px dashed var(--ink-3); width: 7px; height: 7px; }
+
+  /* ---- status pill ---- */
+  .status {
+    display: inline-flex;
+    align-items: center;
+    font-size: 11px;
+    font-weight: 650;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+  }
+  .status-good { color: var(--good); }
+  .status-crit { color: var(--crit); }
+  .status-none { color: var(--ink-3); font-weight: 550; }
+
+  /* ---- tower band ---- */
+  .tower {
+    margin-top: 20px;
+    border: 1px solid var(--hairline);
+    background: var(--panel);
+    border-radius: 6px;
+    padding: 14px 20px 15px;
+    display: flex;
+    align-items: center;
+    gap: 40px;
+    flex-wrap: wrap;
+  }
+  .tower .tower-id { display: flex; align-items: center; gap: 10px; min-width: 128px; }
+  .tower .tower-id .microlabel { color: var(--ink-2); }
+  .tower dl { display: flex; gap: 40px; flex-wrap: wrap; margin: 0; }
+  .tower dt {
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-bottom: 2px;
+  }
+  .tower dd { font-size: 13px; font-variant-numeric: tabular-nums; }
+  .tower .drift-note {
+    font-size: 12px;
+    color: var(--warn);
+    background: var(--warn-bg);
+    border: 1px solid color-mix(in srgb, var(--warn) 26%, var(--paper));
+    border-radius: 4px;
+    padding: 2px 8px;
+    white-space: nowrap;
+  }
+  .tower .reported { margin-left: auto; font-size: 12px; color: var(--ink-2); white-space: nowrap; }
+  .fresh-tick { color: var(--good); }
+
+  /* ---- flight manifest table ---- */
+  .manifest { margin-top: 28px; }
+  .manifest-caption {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .manifest-caption h2 { font-size: 13px; font-weight: 650; letter-spacing: 0.02em; }
+  .manifest-caption .count { font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+
+  .grid-head, .flight-main {
+    display: grid;
+    grid-template-columns: 118px 172px 1fr 250px minmax(210px, 0.8fr) 118px;
+    column-gap: 20px;
+    align-items: center;
+  }
+  .grid-head {
+    padding: 0 16px 8px;
+    border-bottom: 1px solid var(--hairline);
+  }
+  .grid-head .col-reported { text-align: right; }
+
+  .flight {
+    border-bottom: 1px solid var(--hairline);
+    border-left: 3px solid transparent;
+    padding-left: 0;
+  }
+  .flight.is-stale { border-left-color: var(--warn); background: color-mix(in srgb, var(--warn) 3%, var(--paper)); }
+  .flight.is-silent { border-left-color: var(--hairline); background: color-mix(in srgb, var(--ink) 1.5%, var(--paper)); }
+
+  .flight-main { min-height: 52px; padding: 8px 16px 8px 13px; }
+  .flight-main:hover { background: var(--row-hover); }
+  .flight.is-stale .flight-main:hover,
+  .flight.is-silent .flight-main:hover { background: transparent; }
+
+  .cell-flight { font-weight: 600; font-size: 13.5px; letter-spacing: -0.005em; }
+  .cell-flight a { color: var(--ink); }
+  .cell-flight a:hover { color: var(--accent); }
+
+  .cell-branch { font-size: 12.5px; min-width: 0; }
+  .cell-branch .branch { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cell-branch .position {
+    display: block;
+    margin-top: 2px;
+    font-size: 12px;
+    color: var(--ink-2);
+    font-variant-numeric: tabular-nums;
+  }
+  .pos-ahead  { color: var(--ink-2); }
+  .pos-behind { color: var(--ink-2); }
+  .pos-behind.pos-heavy { color: var(--warn); font-weight: 600; }
+  .dirty {
+    color: var(--warn);
+    font-weight: 600;
+    font-size: 11.5px;
+  }
+  .clean-mark { color: var(--ink-3); font-size: 11.5px; }
+
+  .cell-env { font-size: 12.5px; white-space: nowrap; }
+  .cell-env .env-sep { color: var(--ink-3); margin: 0 6px; }
+  .cell-env .proc { display: block; margin-top: 2px; font-size: 11.5px; color: var(--ink-3); }
+
+  .cell-pr { font-size: 12.5px; min-width: 0; }
+  .cell-pr .pr-title {
+    display: block;
+    color: var(--ink-2);
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-top: 1px;
+  }
+  .pr-state {
+    display: inline-block;
+    font-size: 10.5px;
+    font-weight: 650;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    border-radius: 3px;
+    padding: 0.5px 5px;
+    margin-left: 6px;
+    vertical-align: 1px;
+  }
+  .pr-open  { color: var(--good); background: var(--good-bg); }
+  .pr-draft { color: var(--ink-2); background: color-mix(in srgb, var(--ink) 7%, var(--paper)); }
+  .no-pr { color: var(--ink-3); font-size: 12px; }
+
+  .cell-reported { text-align: right; font-size: 12.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .stale-badge, .silent-badge {
+    display: inline-block;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    border-radius: 3px;
+    padding: 1px 6px;
+    margin-left: 7px;
+  }
+  .stale-badge {
+    color: var(--warn);
+    background: var(--warn-bg);
+    border: 1px solid color-mix(in srgb, var(--warn) 30%, var(--paper));
+  }
+  .stale-age { color: var(--warn); font-weight: 650; }
+  .silent-badge {
+    color: var(--ink-3);
+    background: transparent;
+    border: 1px dashed var(--ink-3);
+  }
+  .silent-cell { color: var(--ink-3); font-style: italic; }
+  .flight.is-silent .cell-branch .position,
+  .flight.is-silent .cell-env { color: var(--ink-3); }
+
+  /* ---- commits disclosure ---- */
+  details.commits { padding: 0 16px 0 13px; }
+  details.commits summary {
+    list-style: none;
+    cursor: pointer;
+    font-size: 11px;
+    color: var(--ink-3);
+    padding: 0 0 8px;
+    margin-top: -2px;
+    letter-spacing: 0.04em;
+    display: inline-block;
+    border-radius: 2px;
+  }
+  details.commits summary::-webkit-details-marker { display: none; }
+  details.commits summary::before { content: "▸ "; font-size: 9px; }
+  details.commits[open] summary::before { content: "▾ "; }
+  details.commits summary:hover { color: var(--accent); }
+  .commit-list { padding: 2px 0 12px 18px; }
+  .commit-list li {
+    list-style: none;
+    font-size: 12px;
+    color: var(--ink-2);
+    padding: 2px 0;
+  }
+  .commit-list .sha { margin-right: 10px; }
+
+  /* ---- lower band: loose ends + activity ---- */
+  .lower {
+    display: grid;
+    grid-template-columns: 5fr 7fr;
+    gap: 48px;
+    margin-top: 40px;
+    padding-top: 24px;
+    border-top: 1px solid var(--hairline);
+  }
+  .lower h2 {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-bottom: 12px;
+  }
+  .lower h2 .count { font-weight: 400; margin-left: 6px; font-variant-numeric: tabular-nums; }
+
+  .loose-list li {
+    list-style: none;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--hairline);
+    font-size: 13px;
+  }
+  .loose-list li:first-child { border-top: 1px solid var(--hairline); }
+  .loose-list .tick {
+    flex: none;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--warn);
+    position: relative;
+    top: -1px;
+  }
+  .loose-list .text { flex: 1; min-width: 0; }
+  .loose-list .meta { flex: none; font-size: 11.5px; color: var(--ink-3); white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+  .activity-list li {
+    list-style: none;
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--hairline);
+    font-size: 13px;
+  }
+  .activity-list li:first-child { border-top: 1px solid var(--hairline); }
+  .evt {
+    flex: none;
+    width: 78px;
+    font-size: 10.5px;
+    font-weight: 650;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-align: left;
+  }
+  .evt-takeoff  { color: var(--accent); }
+  .evt-landing  { color: var(--good); }
+  .evt-scrub    { color: var(--ink-3); }
+  .evt-pr       { color: var(--ink-2); }
+  .evt-release  { color: var(--warn); }
+  .activity-list .text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-2); }
+  .activity-list .text b { color: var(--ink); font-weight: 600; }
+  .activity-list .age { flex: none; font-size: 11.5px; color: var(--ink-3); font-variant-numeric: tabular-nums; width: 34px; text-align: right; }
+
+  /* ---- responsive degrade ---- */
+  @media (max-width: 1080px) {
+    .grid-head, .flight-main { grid-template-columns: 110px 150px 1fr 210px 110px; }
+    .col-pr, .cell-pr { display: none; }
+  }
+  @media (max-width: 960px) {
+    .lower { grid-template-columns: 1fr; gap: 32px; }
+    header .summary { margin-left: 0; width: 100%; }
+    .tower { gap: 24px; }
+    .tower .reported { margin-left: 0; }
+  }
+  @media (max-width: 760px) {
+    .grid-head { display: none; }
+    .flight-main { grid-template-columns: 1fr 1fr; row-gap: 6px; padding: 12px 16px 8px 13px; }
+    .cell-reported { text-align: left; }
+  }
+</style>
+
+<div class="shell">
+
+  <header>
+    <h1>Flight Rules<span class="sep">/</span>skyway</h1>
+    <a class="repo" href="#">skyway/skyway-app</a>
+    <p class="summary">
+      5 flights on the board · 2 listening · 2 down ·
+      <span class="warn-word">1 stale</span> ·
+      <span class="warn-word">1 never reported</span> ·
+      3 PRs (1 draft)
+    </p>
+  </header>
+  <p class="subtitle">Direction 1 — Manifest: the flight board as a dense operations table.</p>
+
+  <!-- ================= TOWER ================= -->
+  <section class="tower" aria-label="Tower status">
+    <div class="tower-id">
+      <span class="microlabel">Tower</span>
+      <a class="mono" href="#">main</a>
+    </div>
+    <dl>
+      <div>
+        <dt>Worktree</dt>
+        <dd><span class="clean-mark">clean</span> · <span class="num">0</span> unpushed</dd>
+      </div>
+      <div>
+        <dt>Dev</dt>
+        <dd><a class="mono" href="#">v3.42.0</a></dd>
+      </div>
+      <div>
+        <dt>Prod</dt>
+        <dd><a class="mono" href="#">v3.41.2</a></dd>
+      </div>
+      <div>
+        <dt>Version drift</dt>
+        <dd><span class="drift-note">prod is one release behind</span></dd>
+      </div>
+    </dl>
+    <span class="reported"><span class="fresh-tick">●</span> reported 40s ago</span>
+  </section>
+
+  <!-- ================= FLIGHT MANIFEST ================= -->
+  <section class="manifest" aria-label="Flights">
+    <div class="manifest-caption">
+      <h2>Flights</h2>
+      <span class="count">5 worktrees · ports 4101–4105</span>
+    </div>
+
+    <div class="grid-head microlabel" aria-hidden="true">
+      <span>Status</span>
+      <span>Flight</span>
+      <span>Branch · Position</span>
+      <span>Env</span>
+      <span class="col-pr">PR</span>
+      <span class="col-reported">Reported</span>
+    </div>
+
+    <!-- 1 · checkout-redesign -->
+    <article class="flight">
+      <div class="flight-main">
+        <span class="status status-good"><span class="dot dot-good"></span>LISTENING</span>
+        <span class="cell-flight"><a href="#">checkout-redesign</a></span>
+        <span class="cell-branch">
+          <a class="mono branch" href="#">feat/checkout-redesign</a>
+          <span class="position num">
+            <span class="pos-ahead">↑4</span> <span class="pos-behind">↓1</span>
+            · <span class="clean-mark">clean</span>
+          </span>
+        </span>
+        <span class="cell-env">
+          <a class="mono" href="#">:4101</a><span class="env-sep">·</span><a class="mono" href="#">brisk-otter-421</a>
+          <span class="proc">node</span>
+        </span>
+        <span class="cell-pr">
+          <a class="mono" href="#">#142</a><span class="pr-state pr-open">open</span>
+          <span class="pr-title">Checkout redesign: new payment sheet</span>
+        </span>
+        <span class="cell-reported">40s ago</span>
+      </div>
+      <details class="commits">
+        <summary>last 3 commits</summary>
+        <ul class="commit-list">
+          <li><a class="mono sha" href="#">a41f2c9</a>feat(checkout): wire payment sheet to vault</li>
+          <li><a class="mono sha" href="#">9c02b11</a>feat(checkout): skeleton payment sheet</li>
+          <li><a class="mono sha" href="#">77d31e0</a>chore: split checkout routes</li>
+        </ul>
+      </details>
+    </article>
+
+    <!-- 2 · rate-limiter -->
+    <article class="flight">
+      <div class="flight-main">
+        <span class="status status-crit"><span class="dot dot-crit"></span>NOT LISTENING</span>
+        <span class="cell-flight"><a href="#">rate-limiter</a></span>
+        <span class="cell-branch">
+          <a class="mono branch" href="#">fix/api-rate-limits</a>
+          <span class="position num">
+            <span class="pos-ahead">↑9</span> <span class="pos-behind">↓6</span>
+            · <span class="dirty">3 dirty files</span>
+          </span>
+        </span>
+        <span class="cell-env">
+          <a class="mono" href="#">:4102</a><span class="env-sep">·</span><a class="mono" href="#">calm-heron-77</a>
+        </span>
+        <span class="cell-pr">
+          <a class="mono" href="#">#139</a><span class="pr-state pr-draft">draft</span>
+          <span class="pr-title">Token-bucket rate limiting for public API</span>
+        </span>
+        <span class="cell-reported">2m ago</span>
+      </div>
+      <details class="commits">
+        <summary>last 3 commits</summary>
+        <ul class="commit-list">
+          <li><a class="mono sha" href="#">5b8e0d2</a>fix(api): burst allowance for authenticated clients</li>
+          <li><a class="mono sha" href="#">e11a9c4</a>test(api): rate-limit integration harness</li>
+          <li><a class="mono sha" href="#">0f6b7aa</a>fix(api): 429 retry-after headers</li>
+        </ul>
+      </details>
+    </article>
+
+    <!-- 3 · search-facets -->
+    <article class="flight">
+      <div class="flight-main">
+        <span class="status status-good"><span class="dot dot-good"></span>LISTENING</span>
+        <span class="cell-flight"><a href="#">search-facets</a></span>
+        <span class="cell-branch">
+          <a class="mono branch" href="#">feat/search-facets</a>
+          <span class="position num">
+            <span class="pos-ahead">↑12</span> <span class="pos-behind">↓0</span>
+            · <span class="clean-mark">clean</span>
+          </span>
+        </span>
+        <span class="cell-env">
+          <a class="mono" href="#">:4103</a><span class="env-sep">·</span><a class="mono" href="#">noble-crane-303</a>
+          <span class="proc">node</span>
+        </span>
+        <span class="cell-pr">
+          <a class="mono" href="#">#144</a><span class="pr-state pr-open">open</span>
+          <span class="pr-title">Faceted search filters</span>
+        </span>
+        <span class="cell-reported">55s ago</span>
+      </div>
+      <details class="commits">
+        <summary>last 3 commits</summary>
+        <ul class="commit-list">
+          <li><a class="mono sha" href="#">c9d4e88</a>feat(search): facet counts endpoint</li>
+          <li><a class="mono sha" href="#">2a7b910</a>feat(search): filter chips UI</li>
+          <li><a class="mono sha" href="#">88c1f02</a>refactor(search): extract query builder</li>
+        </ul>
+      </details>
+    </article>
+
+    <!-- 4 · onboarding-copy (STALE) -->
+    <article class="flight is-stale">
+      <div class="flight-main">
+        <span class="status status-crit"><span class="dot dot-crit"></span>NOT LISTENING</span>
+        <span class="cell-flight"><a href="#">onboarding-copy</a></span>
+        <span class="cell-branch">
+          <a class="mono branch" href="#">chore/onboarding-copy</a>
+          <span class="position num">
+            <span class="pos-ahead">↑2</span> <span class="pos-behind pos-heavy">↓14</span>
+            · <span class="dirty">1 dirty file</span>
+          </span>
+        </span>
+        <span class="cell-env">
+          <a class="mono" href="#">:4104</a><span class="env-sep">·</span><a class="mono" href="#">quiet-finch-88</a>
+        </span>
+        <span class="cell-pr"><span class="no-pr">no PR</span></span>
+        <span class="cell-reported">
+          <span class="stale-age">38m ago</span><span class="stale-badge">STALE</span>
+        </span>
+      </div>
+      <details class="commits">
+        <summary>last 3 commits</summary>
+        <ul class="commit-list">
+          <li><a class="mono sha" href="#">b3a0c77</a>chore(onboarding): welcome screen copy pass</li>
+          <li><a class="mono sha" href="#">41d9e06</a>chore(onboarding): empty-state copy</li>
+          <li><a class="mono sha" href="#">d72f813</a>chore: rename tour steps</li>
+        </ul>
+      </details>
+    </article>
+
+    <!-- 5 · perf-budget (never reported) -->
+    <article class="flight is-silent">
+      <div class="flight-main">
+        <span class="status status-none"><span class="dot dot-none"></span>NO REPORT</span>
+        <span class="cell-flight"><a href="#">perf-budget</a></span>
+        <span class="cell-branch">
+          <a class="mono branch" href="#">feat/perf-budget-ci</a>
+          <span class="position silent-cell">position unknown</span>
+        </span>
+        <span class="cell-env">
+          <a class="mono" href="#">:4105</a><span class="env-sep">·</span><a class="mono" href="#">wry-egret-514</a>
+        </span>
+        <span class="cell-pr"><span class="no-pr">no PR</span></span>
+        <span class="cell-reported">
+          <span class="silent-cell">never</span><span class="silent-badge">NO REPORT YET</span>
+        </span>
+      </div>
+    </article>
+  </section>
+
+  <!-- ================= LOOSE ENDS + ACTIVITY ================= -->
+  <div class="lower">
+
+    <section aria-label="Loose ends">
+      <h2>Loose ends<span class="count">3</span></h2>
+      <ul class="loose-list">
+        <li>
+          <span class="tick" aria-hidden="true"></span>
+          <span class="text">Flaky e2e: checkout retries fail on Safari</span>
+          <span class="meta">auto-fix run · 3h</span>
+        </li>
+        <li>
+          <span class="tick" aria-hidden="true"></span>
+          <span class="text">Bump Node to 22.12 before next release</span>
+          <span class="meta">ATC · 1d</span>
+        </li>
+        <li>
+          <span class="tick" aria-hidden="true"></span>
+          <span class="text">PR <a class="mono" href="#">#131</a> landed without a changelog entry</span>
+          <span class="meta">release notes · 2d</span>
+        </li>
+      </ul>
+    </section>
+
+    <section aria-label="Activity">
+      <h2>Activity</h2>
+      <ul class="activity-list">
+        <li>
+          <span class="evt evt-pr">PR opened</span>
+          <span class="text"><a class="mono" href="#">#144</a> — Faceted search filters</span>
+          <span class="age">55s</span>
+        </li>
+        <li>
+          <span class="evt evt-takeoff">Takeoff</span>
+          <span class="text"><b>perf-budget</b> · <a class="mono" href="#">feat/perf-budget-ci</a></span>
+          <span class="age">18m</span>
+        </li>
+        <li>
+          <span class="evt evt-landing">Landing</span>
+          <span class="text"><b>image-cdn</b> · <a class="mono" href="#">#138</a> merged</span>
+          <span class="age">1h</span>
+        </li>
+        <li>
+          <span class="evt evt-pr">PR opened</span>
+          <span class="text"><a class="mono" href="#">#142</a> — Checkout redesign: new payment sheet</span>
+          <span class="age">3h</span>
+        </li>
+        <li>
+          <span class="evt evt-release">Release</span>
+          <span class="text"><a class="mono" href="#">v3.42.0</a> cut from <a class="mono" href="#">main</a></span>
+          <span class="age">5h</span>
+        </li>
+        <li>
+          <span class="evt evt-takeoff">Takeoff</span>
+          <span class="text"><b>checkout-redesign</b> · <a class="mono" href="#">feat/checkout-redesign</a></span>
+          <span class="age">6h</span>
+        </li>
+        <li>
+          <span class="evt evt-scrub">Scrub</span>
+          <span class="text"><b>dark-mode-spike</b> · exploration only</span>
+          <span class="age">1d</span>
+        </li>
+        <li>
+          <span class="evt evt-takeoff">Takeoff</span>
+          <span class="text"><b>search-facets</b> · <a class="mono" href="#">feat/search-facets</a></span>
+          <span class="age">1d</span>
+        </li>
+        <li>
+          <span class="evt evt-pr">PR opened</span>
+          <span class="text"><a class="mono" href="#">#139</a> — Token-bucket rate limiting for public API</span>
+          <span class="age">2d</span>
+        </li>
+        <li>
+          <span class="evt evt-takeoff">Takeoff</span>
+          <span class="text"><b>rate-limiter</b> · <a class="mono" href="#">fix/api-rate-limits</a></span>
+          <span class="age">2d</span>
+        </li>
+      </ul>
+    </section>
+
+  </div>
+</div>
+
+<!-- Variant Navigation -->
+<nav class="variant-nav" aria-label="Design variants">
+  <a href="01-manifest.html" class="active" aria-current="page">1</a>
+  <a href="02-departures.html">2</a>
+  <a href="03-console.html">3</a>
+  <a href="04-briefing.html">4</a>
+  <a href="05-tower.html">5</a>
+</nav>
+<style>
+  .variant-nav { position: fixed; bottom: 24px; right: 24px; display: flex; gap: 4px; padding: 6px; background: rgba(20,20,20,0.55); backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%); border-radius: 20px; border: 1px solid rgba(255,255,255,0.15); box-shadow: 0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.1), inset 0 0.5px 0 rgba(255,255,255,0.2); z-index: 2147483647; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; transition: opacity 0.3s ease; }
+  .variant-nav:hover { background: rgba(20,20,20,0.7); }
+  .variant-nav a { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 12px; text-decoration: none; font-size: 14px; font-weight: 500; letter-spacing: -0.01em; color: rgba(255,255,255,0.7); text-shadow: 0 1px 3px rgba(0,0,0,0.4); transition: all 0.2s cubic-bezier(0.4,0,0.2,1); background: transparent; border: 1px solid transparent; }
+  .variant-nav a:hover { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.95); border-color: rgba(255,255,255,0.08); }
+  .variant-nav a.active { background: rgba(255,255,255,0.2); color: #fff; font-weight: 600; border-color: rgba(255,255,255,0.15); box-shadow: 0 2px 8px rgba(0,0,0,0.15), inset 0 0.5px 0 rgba(255,255,255,0.25); }
+</style>

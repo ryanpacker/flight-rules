@@ -1,0 +1,709 @@
+<!--
+  ============================================================================
+  FLIGHT RULES - Direction 4 of 5: "BRIEFING" (calm status page)
+  ============================================================================
+
+  TOKEN PLAN - follow exactly.
+
+  COLORS (6 named hexes, everything derived from these):
+    --paper   #FAF9F6   warm paper white (slight yellow-warm bias, not cream)
+    --ink     #211E1A   near-black warm ink (headings, lead, strong facts)
+    --ink-2   #5C564E   soft ink (body facts, labels)
+    --ink-3   #9B948A   faint ink (metadata, gutters, stale content)
+    --rule    #E6E2DA   hairline dividers only
+    --accent  #274F8A   navy - links and identifiers ONLY, never health
+
+  SEMANTIC HEALTH (muted, dots + status words only, never backgrounds):
+    good  #2F7D4F   listening / clean
+    warn  #A9741A   dirty files, drift, going stale, prod behind
+    crit  #B3372E   not listening (down)
+    Never-reported = hollow dot (1.5px ink-3 ring, no fill) + "no report yet".
+
+  TYPE ROLES:
+    display  Charter, "Iowan Old Style", Georgia, serif
+             - lead sentence (34px/1.25, balance), flight names (23px),
+               section headings (13px small-caps letterspaced switches to
+               UI stack - see below), open-item text (17px)
+    ui       -apple-system, system-ui, "Segoe UI", sans - facts, labels,
+             metadata, section headings (11px uppercase, +0.08em, ink-3)
+    mono     ui-monospace, "SF Mono", Menlo, monospace - EVERY identifier:
+             branch, port, deployment, PR#, commit hash, version numbers.
+             tabular-nums on all numeric columns (positions, ages).
+
+  LAYOUT:
+    Single centered column, max-width 920px, 48px side padding desktop.
+    NO cards, NO boxes, NO fills. Structure = whitespace + 1px rules.
+    Header masthead -> lead -> metadata line -> TOWER -> FLIGHTS (5 sections
+    separated by hairline rules; 2-col grid: name/branch/commits left,
+    right-aligned fact column 300px right) -> OPEN ITEMS (editorial list)
+    -> ACTIVITY (timeline, 72px hanging left age gutter, tabular).
+    Stale flight: whole section drops to ink-3, dot desaturated, explicit
+    "last heard 38m ago" in warn. Never-reported: hollow dot, em-dash facts.
+    Section vertical rhythm: 56px between major sections, 28px padding
+    within flight rows. <=760px: fact column stacks left-aligned under name.
+
+  FOCUS: 2px solid accent outline, 2px offset, on all links.
+  ============================================================================
+-->
+<title>Flight Rules — skyway briefing</title>
+<style>
+  :root {
+    --paper: #FAF9F6;
+    --ink: #211E1A;
+    --ink-2: #5C564E;
+    --ink-3: #9B948A;
+    --rule: #E6E2DA;
+    --accent: #274F8A;
+    --good: #2F7D4F;
+    --warn: #A9741A;
+    --crit: #B3372E;
+    --display: Charter, "Iowan Old Style", Georgia, serif;
+    --ui: -apple-system, system-ui, "Segoe UI", sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { background: var(--paper); }
+
+  body {
+    font-family: var(--ui);
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--ink-2);
+    background: var(--paper);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 40px 48px 96px;
+  }
+
+  a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+  a:hover { text-decoration: underline; text-underline-offset: 2px; }
+  a:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 1px;
+  }
+
+  code, .mono {
+    font-family: var(--mono);
+    font-size: 0.93em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- masthead ---------- */
+
+  .masthead {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .masthead .brand {
+    font-family: var(--ui);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink);
+  }
+  .masthead .direction {
+    font-size: 12px;
+    color: var(--ink-3);
+  }
+
+  /* ---------- lead ---------- */
+
+  .lead {
+    margin-top: 52px;
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: 34px;
+    line-height: 1.25;
+    color: var(--ink);
+    text-wrap: balance;
+    max-width: 21em;
+  }
+  .lead .going-stale { color: var(--warn); }
+
+  .lead-meta {
+    margin-top: 18px;
+    font-size: 13px;
+    color: var(--ink-3);
+    line-height: 1.7;
+  }
+  .lead-meta .sep { margin: 0 7px; color: var(--rule); }
+  .lead-meta .warn-note { color: var(--warn); }
+
+  /* ---------- section headings ---------- */
+
+  section { margin-top: 56px; }
+
+  .section-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .section-head h2 {
+    font-family: var(--ui);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .section-head .count {
+    font-size: 11px;
+    color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- health dots & status words ---------- */
+
+  .dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 7px;
+    vertical-align: 1px;
+  }
+  .dot.good { background: var(--good); }
+  .dot.warn { background: var(--warn); }
+  .dot.crit { background: var(--crit); }
+  .dot.hollow {
+    background: transparent;
+    box-shadow: inset 0 0 0 1.5px var(--ink-3);
+  }
+  .dot.faded { background: var(--ink-3); }
+
+  .status-word {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+  }
+  .status-word.good { color: var(--good); }
+  .status-word.warn { color: var(--warn); }
+  .status-word.crit { color: var(--crit); }
+  .status-word.muted { color: var(--ink-3); }
+
+  /* ---------- tower ---------- */
+
+  .tower-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 40px;
+    padding-top: 18px;
+    align-items: baseline;
+  }
+  .fact {
+    min-width: 0;
+  }
+  .fact .label {
+    display: block;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-bottom: 2px;
+  }
+  .fact .value {
+    font-size: 13.5px;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .fact .value .note { color: var(--warn); font-family: var(--ui); font-size: 12px; }
+  .fact .value .quiet { color: var(--ink-3); font-family: var(--ui); font-size: 12px; }
+
+  /* ---------- flights ---------- */
+
+  .flight {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 12px 48px;
+    padding: 28px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .flight:last-of-type { border-bottom: none; }
+
+  .flight-name {
+    font-family: var(--display);
+    font-size: 23px;
+    font-weight: 400;
+    line-height: 1.2;
+    color: var(--ink);
+  }
+  .flight-name a { color: inherit; }
+  .flight-status-line {
+    margin-top: 6px;
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .flight-branch { font-size: 12.5px; }
+
+  .commits {
+    list-style: none;
+    margin-top: 16px;
+  }
+  .commits li {
+    font-size: 12px;
+    color: var(--ink-3);
+    line-height: 1.85;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .commits .hash { color: var(--ink-3); margin-right: 8px; }
+  .commits .msg { color: var(--ink-2); }
+
+  .facts {
+    text-align: right;
+    font-size: 13px;
+    color: var(--ink-2);
+    font-variant-numeric: tabular-nums;
+  }
+  .facts .row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 16px;
+    padding: 3px 0;
+  }
+  .facts .k {
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    white-space: nowrap;
+  }
+  .facts .v {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--ink);
+  }
+  .facts .v .up { color: var(--good); }
+  .facts .v .down { color: var(--warn); }
+  .facts .v .none { color: var(--ink-3); font-family: var(--ui); }
+  .facts .v.dirty { color: var(--warn); }
+  .facts .freshness { color: var(--ink-3); font-size: 12px; }
+  .facts .freshness.stale-note { color: var(--warn); font-weight: 600; }
+  .pr-title {
+    display: block;
+    font-size: 12px;
+    color: var(--ink-3);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 1px;
+  }
+  .pr-state {
+    font-size: 10.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-left: 6px;
+  }
+
+  /* stale flight: whole section fades, note stays legible */
+  .flight.stale .flight-name,
+  .flight.stale .flight-name a,
+  .flight.stale .facts .v,
+  .flight.stale .commits .msg { color: var(--ink-3); }
+  .flight.stale a { color: color-mix(in srgb, var(--accent) 55%, var(--paper)); }
+  .flight.stale .commits .hash,
+  .flight.stale .facts .k,
+  .flight.stale .fact .label { color: color-mix(in srgb, var(--ink-3) 65%, var(--paper)); }
+
+  /* never-reported flight: quiet, expectant */
+  .flight.silent .flight-name { color: var(--ink); }
+  .flight.silent .facts .v { color: var(--ink-3); }
+  .silent-note {
+    margin-top: 14px;
+    font-size: 13px;
+    font-style: italic;
+    font-family: var(--display);
+    color: var(--ink-3);
+  }
+
+  /* ---------- open items ---------- */
+
+  .open-items { list-style: none; padding-top: 6px; }
+  .open-items li {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 32px;
+    padding: 13px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .open-items li:last-child { border-bottom: none; }
+  .open-items .item-text {
+    font-family: var(--display);
+    font-size: 17px;
+    color: var(--ink);
+    line-height: 1.4;
+  }
+  .open-items .item-meta {
+    font-size: 12px;
+    color: var(--ink-3);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- activity timeline ---------- */
+
+  .timeline { list-style: none; padding-top: 4px; }
+  .timeline li {
+    display: grid;
+    grid-template-columns: 72px 1fr;
+    gap: 24px;
+    padding: 9px 0;
+  }
+  .timeline .age {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-3);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    padding-top: 1px;
+  }
+  .timeline .event { font-size: 13.5px; color: var(--ink-2); min-width: 0; }
+  .timeline .kind {
+    display: inline-block;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    margin-right: 10px;
+    min-width: 74px;
+  }
+  .kind.takeoff  { color: var(--good); }
+  .kind.landing  { color: var(--accent); }
+  .kind.scrub    { color: var(--ink-3); }
+  .kind.pr       { color: var(--ink-2); }
+  .kind.release  { color: var(--ink); }
+  .timeline .detail { color: var(--ink); }
+  .timeline .detail .quiet { color: var(--ink-3); }
+
+  /* ---------- footer ---------- */
+
+  .footer {
+    margin-top: 72px;
+    padding-top: 16px;
+    border-top: 1px solid var(--rule);
+    font-size: 12px;
+    color: var(--ink-3);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* ---------- responsive ---------- */
+
+  @media (max-width: 760px) {
+    .page { padding: 28px 20px 72px; }
+    .lead { font-size: 27px; }
+    .flight { grid-template-columns: 1fr; gap: 16px; }
+    .facts { text-align: left; }
+    .facts .row { justify-content: flex-start; gap: 12px; }
+    .timeline li { grid-template-columns: 52px 1fr; gap: 14px; }
+    .timeline .kind { min-width: 0; display: block; margin-bottom: 1px; }
+    .tower-row { gap: 14px 28px; }
+  }
+</style>
+
+<div class="page">
+
+  <header class="masthead">
+    <span class="brand">Flight Rules · skyway</span>
+    <span class="direction">Direction 4 — Briefing: a calm, typographic status page</span>
+  </header>
+
+  <h1 class="lead">4 flights airborne. <span class="going-stale">One report going stale.</span></h1>
+
+  <p class="lead-meta">
+    <a href="#" class="mono">skyway/skyway-app</a><span class="sep">·</span>
+    integration branch <a href="#" class="mono">main</a>, clean<span class="sep">·</span>
+    dev <a href="#" class="mono">v3.42.0</a><span class="sep">·</span>
+    prod <a href="#" class="mono">v3.41.2</a> <span class="warn-note">(one release behind)</span><span class="sep">·</span>
+    tower reported 40s ago
+  </p>
+
+  <!-- ============ TOWER ============ -->
+  <section aria-label="Tower">
+    <div class="section-head">
+      <h2>Tower</h2>
+      <span class="count">main checkout · reported 40s ago</span>
+    </div>
+    <div class="tower-row">
+      <div class="fact">
+        <span class="label">Branch</span>
+        <span class="value"><span class="dot good"></span><a href="#" class="mono">main</a></span>
+      </div>
+      <div class="fact">
+        <span class="label">Working tree</span>
+        <span class="value">clean</span>
+      </div>
+      <div class="fact">
+        <span class="label">Unpushed</span>
+        <span class="value">0 commits</span>
+      </div>
+      <div class="fact">
+        <span class="label">Dev</span>
+        <span class="value"><a href="#" class="mono">v3.42.0</a></span>
+      </div>
+      <div class="fact">
+        <span class="label">Prod</span>
+        <span class="value"><a href="#" class="mono">v3.41.2</a> <span class="note">one release behind</span></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FLIGHTS ============ -->
+  <section aria-label="Flights">
+    <div class="section-head">
+      <h2>Flights</h2>
+      <span class="count">5 worktrees · 4 reporting</span>
+    </div>
+
+    <!-- 1. checkout-redesign -->
+    <article class="flight">
+      <div>
+        <h3 class="flight-name"><a href="#">checkout-redesign</a></h3>
+        <div class="flight-status-line">
+          <span class="status-word good"><span class="dot good"></span>Listening</span>
+          <span class="flight-branch"><a href="#" class="mono">feat/checkout-redesign</a></span>
+        </div>
+        <ul class="commits">
+          <li><a href="#" class="mono hash">a41f2c9</a><span class="msg">feat(checkout): wire payment sheet to vault</span></li>
+          <li><a href="#" class="mono hash">9c02b11</a><span class="msg">feat(checkout): skeleton payment sheet</span></li>
+          <li><a href="#" class="mono hash">77d31e0</a><span class="msg">chore: split checkout routes</span></li>
+        </ul>
+      </div>
+      <div class="facts">
+        <div class="row"><span class="k">Env</span><span class="v"><a href="#" class="mono">:4101</a> <span class="quiet mono">node</span></span></div>
+        <div class="row"><span class="k">Deployment</span><span class="v"><a href="#" class="mono">brisk-otter-421</a></span></div>
+        <div class="row"><span class="k">Tree</span><span class="v">clean</span></div>
+        <div class="row"><span class="k">vs main</span><span class="v mono"><span class="up">↑4</span> <span class="down">↓1</span></span></div>
+        <div class="row">
+          <span class="k">PR</span>
+          <span class="v"><a href="#" class="mono">#142</a><span class="pr-state">open</span></span>
+        </div>
+        <div class="row"><span class="k"></span><span class="pr-title">Checkout redesign: new payment sheet</span></div>
+        <div class="row"><span class="k">Report</span><span class="v freshness">40s ago</span></div>
+      </div>
+    </article>
+
+    <!-- 2. rate-limiter -->
+    <article class="flight">
+      <div>
+        <h3 class="flight-name"><a href="#">rate-limiter</a></h3>
+        <div class="flight-status-line">
+          <span class="status-word crit"><span class="dot crit"></span>Not listening</span>
+          <span class="flight-branch"><a href="#" class="mono">fix/api-rate-limits</a></span>
+        </div>
+        <ul class="commits">
+          <li><a href="#" class="mono hash">5b8e0d2</a><span class="msg">fix(api): burst allowance for authenticated clients</span></li>
+          <li><a href="#" class="mono hash">e11a9c4</a><span class="msg">test(api): rate-limit integration harness</span></li>
+          <li><a href="#" class="mono hash">0f6b7aa</a><span class="msg">fix(api): 429 retry-after headers</span></li>
+        </ul>
+      </div>
+      <div class="facts">
+        <div class="row"><span class="k">Env</span><span class="v"><a href="#" class="mono">:4102</a> <span class="quiet">down</span></span></div>
+        <div class="row"><span class="k">Deployment</span><span class="v"><a href="#" class="mono">calm-heron-77</a></span></div>
+        <div class="row"><span class="k">Tree</span><span class="v dirty">3 dirty files</span></div>
+        <div class="row"><span class="k">vs main</span><span class="v mono"><span class="up">↑9</span> <span class="down">↓6</span></span></div>
+        <div class="row">
+          <span class="k">PR</span>
+          <span class="v"><a href="#" class="mono">#139</a><span class="pr-state">draft</span></span>
+        </div>
+        <div class="row"><span class="k"></span><span class="pr-title">Token-bucket rate limiting for public API</span></div>
+        <div class="row"><span class="k">Report</span><span class="v freshness">2m ago</span></div>
+      </div>
+    </article>
+
+    <!-- 3. search-facets -->
+    <article class="flight">
+      <div>
+        <h3 class="flight-name"><a href="#">search-facets</a></h3>
+        <div class="flight-status-line">
+          <span class="status-word good"><span class="dot good"></span>Listening</span>
+          <span class="flight-branch"><a href="#" class="mono">feat/search-facets</a></span>
+        </div>
+        <ul class="commits">
+          <li><a href="#" class="mono hash">c9d4e88</a><span class="msg">feat(search): facet counts endpoint</span></li>
+          <li><a href="#" class="mono hash">2a7b910</a><span class="msg">feat(search): filter chips UI</span></li>
+          <li><a href="#" class="mono hash">88c1f02</a><span class="msg">refactor(search): extract query builder</span></li>
+        </ul>
+      </div>
+      <div class="facts">
+        <div class="row"><span class="k">Env</span><span class="v"><a href="#" class="mono">:4103</a> <span class="quiet mono">node</span></span></div>
+        <div class="row"><span class="k">Deployment</span><span class="v"><a href="#" class="mono">noble-crane-303</a></span></div>
+        <div class="row"><span class="k">Tree</span><span class="v">clean</span></div>
+        <div class="row"><span class="k">vs main</span><span class="v mono"><span class="up">↑12</span> <span class="down">↓0</span></span></div>
+        <div class="row">
+          <span class="k">PR</span>
+          <span class="v"><a href="#" class="mono">#144</a><span class="pr-state">open</span></span>
+        </div>
+        <div class="row"><span class="k"></span><span class="pr-title">Faceted search filters</span></div>
+        <div class="row"><span class="k">Report</span><span class="v freshness">55s ago</span></div>
+      </div>
+    </article>
+
+    <!-- 4. onboarding-copy (STALE) -->
+    <article class="flight stale">
+      <div>
+        <h3 class="flight-name"><a href="#">onboarding-copy</a></h3>
+        <div class="flight-status-line">
+          <span class="status-word warn"><span class="dot warn"></span>Stale</span>
+          <span class="status-word muted"><span class="dot faded"></span>Not listening</span>
+          <span class="flight-branch"><a href="#" class="mono">chore/onboarding-copy</a></span>
+        </div>
+        <ul class="commits">
+          <li><a href="#" class="mono hash">b3a0c77</a><span class="msg">chore(onboarding): welcome screen copy pass</span></li>
+          <li><a href="#" class="mono hash">41d9e06</a><span class="msg">chore(onboarding): empty-state copy</span></li>
+          <li><a href="#" class="mono hash">d72f813</a><span class="msg">chore: rename tour steps</span></li>
+        </ul>
+      </div>
+      <div class="facts">
+        <div class="row"><span class="k">Env</span><span class="v"><a href="#" class="mono">:4104</a> <span class="quiet">down</span></span></div>
+        <div class="row"><span class="k">Deployment</span><span class="v"><a href="#" class="mono">quiet-finch-88</a></span></div>
+        <div class="row"><span class="k">Tree</span><span class="v dirty">1 dirty file</span></div>
+        <div class="row"><span class="k">vs main</span><span class="v mono"><span class="up">↑2</span> <span class="down">↓14</span></span></div>
+        <div class="row"><span class="k">PR</span><span class="v"><span class="none">none</span></span></div>
+        <div class="row"><span class="k">Report</span><span class="v freshness stale-note">last heard 38m ago</span></div>
+      </div>
+    </article>
+
+    <!-- 5. perf-budget (never reported) -->
+    <article class="flight silent">
+      <div>
+        <h3 class="flight-name"><a href="#">perf-budget</a></h3>
+        <div class="flight-status-line">
+          <span class="status-word muted"><span class="dot hollow"></span>No report yet</span>
+          <span class="flight-branch"><a href="#" class="mono">feat/perf-budget-ci</a></span>
+        </div>
+        <p class="silent-note">Scheduled and assigned, but this flight has never reported. Nothing below is observed — only what the tower assigned at takeoff.</p>
+      </div>
+      <div class="facts">
+        <div class="row"><span class="k">Env</span><span class="v"><a href="#" class="mono">:4105</a> <span class="quiet">unverified</span></span></div>
+        <div class="row"><span class="k">Deployment</span><span class="v"><a href="#" class="mono">wry-egret-514</a></span></div>
+        <div class="row"><span class="k">Tree</span><span class="v">—</span></div>
+        <div class="row"><span class="k">vs main</span><span class="v">—</span></div>
+        <div class="row"><span class="k">PR</span><span class="v"><span class="none">none</span></span></div>
+        <div class="row"><span class="k">Report</span><span class="v freshness">never</span></div>
+      </div>
+    </article>
+  </section>
+
+  <!-- ============ OPEN ITEMS ============ -->
+  <section aria-label="Open items">
+    <div class="section-head">
+      <h2>Open items</h2>
+      <span class="count">3</span>
+    </div>
+    <ul class="open-items">
+      <li>
+        <span class="item-text">Flaky e2e: checkout retries fail on Safari</span>
+        <span class="item-meta">auto-fix run · 3h ago</span>
+      </li>
+      <li>
+        <span class="item-text">Bump Node to 22.12 before next release</span>
+        <span class="item-meta">ATC · 1d ago</span>
+      </li>
+      <li>
+        <span class="item-text">PR <a href="#" class="mono">#131</a> landed without a changelog entry</span>
+        <span class="item-meta">release notes · 2d ago</span>
+      </li>
+    </ul>
+  </section>
+
+  <!-- ============ ACTIVITY ============ -->
+  <section aria-label="Activity">
+    <div class="section-head">
+      <h2>Activity</h2>
+      <span class="count">newest first</span>
+    </div>
+    <ul class="timeline">
+      <li>
+        <span class="age">55s</span>
+        <span class="event"><span class="kind pr">PR opened</span><span class="detail"><a href="#" class="mono">#144</a> — Faceted search filters</span></span>
+      </li>
+      <li>
+        <span class="age">18m</span>
+        <span class="event"><span class="kind takeoff">Takeoff</span><span class="detail">perf-budget <span class="quiet">·</span> <a href="#" class="mono">feat/perf-budget-ci</a></span></span>
+      </li>
+      <li>
+        <span class="age">1h</span>
+        <span class="event"><span class="kind landing">Landing</span><span class="detail">image-cdn <span class="quiet">·</span> <a href="#" class="mono">#138</a> merged</span></span>
+      </li>
+      <li>
+        <span class="age">3h</span>
+        <span class="event"><span class="kind pr">PR opened</span><span class="detail"><a href="#" class="mono">#142</a> — Checkout redesign: new payment sheet</span></span>
+      </li>
+      <li>
+        <span class="age">5h</span>
+        <span class="event"><span class="kind release">Release</span><span class="detail"><a href="#" class="mono">v3.42.0</a> cut from <a href="#" class="mono">main</a></span></span>
+      </li>
+      <li>
+        <span class="age">6h</span>
+        <span class="event"><span class="kind takeoff">Takeoff</span><span class="detail">checkout-redesign <span class="quiet">·</span> <a href="#" class="mono">feat/checkout-redesign</a></span></span>
+      </li>
+      <li>
+        <span class="age">1d</span>
+        <span class="event"><span class="kind scrub">Scrub</span><span class="detail">dark-mode-spike <span class="quiet">· exploration only</span></span></span>
+      </li>
+      <li>
+        <span class="age">1d</span>
+        <span class="event"><span class="kind takeoff">Takeoff</span><span class="detail">search-facets <span class="quiet">·</span> <a href="#" class="mono">feat/search-facets</a></span></span>
+      </li>
+      <li>
+        <span class="age">2d</span>
+        <span class="event"><span class="kind pr">PR opened</span><span class="detail"><a href="#" class="mono">#139</a> — Token-bucket rate limiting for public API</span></span>
+      </li>
+      <li>
+        <span class="age">2d</span>
+        <span class="event"><span class="kind takeoff">Takeoff</span><span class="detail">rate-limiter <span class="quiet">·</span> <a href="#" class="mono">fix/api-rate-limits</a></span></span>
+      </li>
+    </ul>
+  </section>
+
+  <footer class="footer">
+    <span>All data is reported observation — freshness shown per flight.</span>
+    <span>Flight Rules · briefing view</span>
+  </footer>
+
+</div>
+
+<!-- Variant Navigation -->
+<nav class="variant-nav" aria-label="Design variants">
+  <a href="01-manifest.html">1</a>
+  <a href="02-departures.html">2</a>
+  <a href="03-console.html">3</a>
+  <a href="04-briefing.html" class="active" aria-current="page">4</a>
+  <a href="05-tower.html">5</a>
+</nav>
+<style>
+  .variant-nav { position: fixed; bottom: 24px; right: 24px; display: flex; gap: 4px; padding: 6px; background: rgba(20,20,20,0.55); backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%); border-radius: 20px; border: 1px solid rgba(255,255,255,0.15); box-shadow: 0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.1), inset 0 0.5px 0 rgba(255,255,255,0.2); z-index: 2147483647; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; transition: opacity 0.3s ease; }
+  .variant-nav:hover { background: rgba(20,20,20,0.7); }
+  .variant-nav a { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 12px; text-decoration: none; font-size: 14px; font-weight: 500; letter-spacing: -0.01em; color: rgba(255,255,255,0.7); text-shadow: 0 1px 3px rgba(0,0,0,0.4); transition: all 0.2s cubic-bezier(0.4,0,0.2,1); background: transparent; border: 1px solid transparent; }
+  .variant-nav a:hover { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.95); border-color: rgba(255,255,255,0.08); }
+  .variant-nav a.active { background: rgba(255,255,255,0.2); color: #fff; font-weight: 600; border-color: rgba(255,255,255,0.15); box-shadow: 0 2px 8px rgba(0,0,0,0.15), inset 0 0.5px 0 rgba(255,255,255,0.25); }
+</style>

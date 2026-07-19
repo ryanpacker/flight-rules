@@ -9,6 +9,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
+    "report": "node scripts/report.mjs",
+    "seed": "node scripts/seed.mjs",
     "format": "prettier --write"
   },
   "dependencies": {
