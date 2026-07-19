@@ -133,16 +133,24 @@ designed so swapping in real auth later only touches the helper.
 working links; re-running the reporter updates the page live with no refresh;
 requests without the secret are rejected for both reads and writes.
 
-### Phase 2.5 -- absorb the flight driver (decided 2026-07-19)
+### Phase 2.5 -- absorb the flight driver (decided 2026-07-19, DONE 2026-07-19)
 
 Flight Rules owns the *shape* of a flight; consumers provide identity
 (registry row + `flightrules.config.json`) and a hangar contract (hooks).
-The generic spec-1.1 driver (`wt.sh` + `lib.sh` + tests) moves from
-the first consumer into the payload, registry calls become driver behavior,
-`wt-quick.sh` dies at parity, and the reporter's hardcoded `.env.local`
-greps become config. Full brief: `docs/phase-2.5-driver.md`. The supported
-archetype (one for now): git worktree + port + dev server + optional
-per-flight backend deployment.
+The generic spec-1.1 driver (`wt.sh` + `lib.sh` + tests) moved from the
+first consumer into `payload/scripts/`, registry calls became driver
+behavior (takeoff on worktree creation, deployment patched in when a hook
+reports one via `meta/deployment`, land/scrub + reporter on teardown --
+all best-effort, never blocking env work), `wt-quick.sh` died at parity,
+and the reporter's env-var greps come from the consumer's
+`flightrules.config.json` (`report.portVar` / `deploymentVar` /
+`deploymentStripPrefix`). Full brief: `docs/phase-2.5-driver.md`.
+
+**Flight archetype #1 (the only supported shape):** a git worktree off the
+integration branch + a leased port (slot = portBase + N) + a supervised dev
+server + an optional per-flight backend deployment, driven by `wt.sh` and
+provisioned by the consumer's hooks. Archetype #2 waits for a real project
+that strains this one -- no speculative generality before then.
 
 ### Phase 2 -- instrumentation
 

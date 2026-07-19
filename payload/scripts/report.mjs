@@ -83,6 +83,25 @@ function listeningProcesses(port) {
 const project = await call(`/projects?name=${encodeURIComponent(projectName)}`);
 const { repoPath, worktreeRoot, githubRepo, integrationBranch } = project;
 
+// How to read a flight's env from its worktree is consumer-specific and
+// comes from the consumer's flightrules.config.json ("report" block):
+//   portVar                env var holding the dev-server port (default PORT)
+//   deploymentVar          env var holding the backend deployment name
+//                          (no default -- naming it names the provider)
+//   deploymentStripPrefix  prefix to strip from that value (e.g. a CLI's
+//                          type tag); the rest stays raw per the
+//                          link-derivation rule
+let reportConfig = {};
+try {
+  reportConfig =
+    JSON.parse(readFileSync(join(repoPath, "flightrules.config.json"), "utf8"))
+      .report ?? {};
+} catch {
+  // no consumer config -- defaults below
+}
+const portVar = reportConfig.portVar ?? "PORT";
+const { deploymentVar, deploymentStripPrefix } = reportConfig;
+
 function readPackageVersion(dir) {
   try {
     return JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).version;
@@ -154,8 +173,15 @@ const flights = [];
 for (const wt of flightWorktrees) {
   const slug = basename(wt.path);
   const env = parseEnvFile(join(wt.path, ".env.local"));
-  const port = env.PORT ? Number(env.PORT) : undefined;
-  const deploymentName = env.CONVEX_DEPLOYMENT?.replace(/^dev:/, "");
+  const port = env[portVar] ? Number(env[portVar]) : undefined;
+  let deploymentName = deploymentVar ? env[deploymentVar] : undefined;
+  if (
+    deploymentName &&
+    deploymentStripPrefix &&
+    deploymentName.startsWith(deploymentStripPrefix)
+  ) {
+    deploymentName = deploymentName.slice(deploymentStripPrefix.length);
+  }
   const branch = wt.branch ?? "detached";
 
   const counts = git(
