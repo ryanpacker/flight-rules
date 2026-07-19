@@ -133,6 +133,17 @@ designed so swapping in real auth later only touches the helper.
 working links; re-running the reporter updates the page live with no refresh;
 requests without the secret are rejected for both reads and writes.
 
+### Phase 2.5 -- absorb the flight driver (decided 2026-07-19)
+
+Flight Rules owns the *shape* of a flight; consumers provide identity
+(registry row + `flightrules.config.json`) and a hangar contract (hooks).
+The generic spec-1.1 driver (`wt.sh` + `lib.sh` + tests) moves from
+the first consumer into the payload, registry calls become driver behavior,
+`wt-quick.sh` dies at parity, and the reporter's hardcoded `.env.local`
+greps become config. Full brief: `docs/phase-2.5-driver.md`. The supported
+archetype (one for now): git worktree + port + dev server + optional
+per-flight backend deployment.
+
 ### Phase 2 -- instrumentation
 
 1. **Lifecycle hooks:** takeoff / land / scrub wrap the consumer project's
