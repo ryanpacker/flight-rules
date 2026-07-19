@@ -646,6 +646,7 @@ function EventText({
               {branch}
             </ExtLink>
           )}
+          {branch && number && " · "}
           {number && (
             <ExtLink href={prUrl(project, number)} className={mono}>
               #{number}
