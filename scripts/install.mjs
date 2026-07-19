@@ -28,7 +28,7 @@ import {
   unlinkSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, join, relative, resolve } from "node:path";
+import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
@@ -81,7 +81,11 @@ const previous = existsSync(join(frDir, "VERSION"))
 for (const sub of ["skills", "scripts"]) {
   const dest = join(frDir, sub);
   rmSync(dest, { recursive: true, force: true });
-  cpSync(join(payloadDir, sub), dest, { recursive: true });
+  cpSync(join(payloadDir, sub), dest, {
+    recursive: true,
+    // The driver's tests run in this repo's vitest, not in consumers.
+    filter: (src) => !src.split(sep).includes("__tests__"),
+  });
 }
 writeFileSync(join(frDir, "VERSION"), `${version}\n`);
 
