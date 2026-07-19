@@ -112,9 +112,10 @@ const ghOut = sh("gh", [
   "--limit",
   "50",
   "--json",
-  "number,title,headRefName,state,isDraft,updatedAt",
+  "number,title,headRefName,state,isDraft,updatedAt,createdAt,mergedAt,closedAt",
 ]);
 if (ghOut) {
+  const ts = (value) => (value ? Date.parse(value) : undefined);
   prs = JSON.parse(ghOut).map((pr) => ({
     number: pr.number,
     title: pr.title,
@@ -122,6 +123,9 @@ if (ghOut) {
     state: pr.state,
     isDraft: pr.isDraft,
     updatedAt: Date.parse(pr.updatedAt),
+    createdAt: ts(pr.createdAt),
+    mergedAt: ts(pr.mergedAt),
+    closedAt: ts(pr.closedAt),
   }));
 } else {
   console.warn("warning: `gh pr list` failed; reporting without PRs");

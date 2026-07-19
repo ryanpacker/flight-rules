@@ -18,6 +18,9 @@ const prSnapshot = v.object({
   state: v.string(),
   isDraft: v.boolean(),
   updatedAt: v.number(),
+  createdAt: v.optional(v.number()),
+  mergedAt: v.optional(v.number()),
+  closedAt: v.optional(v.number()),
 });
 
 // Ingest one reporter snapshot. Flights the reporter no longer sees are left
@@ -102,11 +105,13 @@ export const ingest = internalMutation({
         await ctx.db.patch(existing._id, pr);
       } else {
         await ctx.db.insert("prs", { projectId, ...pr });
+        // Stamp the event with the PR's real open time, so backfilled PRs
+        // sort into their true place in the feed instead of piling up "now".
         await ctx.db.insert("events", {
           projectId,
           kind: "pr-opened",
           payload: { number: pr.number, title: pr.title, headRef: pr.headRef },
-          at: args.reportedAt,
+          at: pr.createdAt ?? args.reportedAt,
         });
       }
     }

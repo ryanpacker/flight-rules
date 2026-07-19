@@ -69,6 +69,11 @@ export default defineSchema({
     state: v.string(),
     isDraft: v.boolean(),
     updatedAt: v.number(),
+    // Real GitHub timestamps (optional: rows ingested before these were
+    // reported lack them). createdAt drives the pr-opened event's `at`.
+    createdAt: v.optional(v.number()),
+    mergedAt: v.optional(v.number()),
+    closedAt: v.optional(v.number()),
   })
     .index("by_project", ["projectId"])
     .index("by_project_number", ["projectId", "number"]),
