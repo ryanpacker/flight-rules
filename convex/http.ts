@@ -2,6 +2,8 @@ import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 
+import type { FunctionReference } from "convex/server";
+
 const http = httpRouter();
 
 function authorized(request: Request): boolean {
@@ -13,29 +15,47 @@ function authorized(request: Request): boolean {
   return Boolean(expected) && token === expected;
 }
 
+// POST route boilerplate: bearer check, JSON body, run one internal mutation.
+function mutationRoute(
+  path: string,
+  fn: FunctionReference<"mutation", "internal">,
+) {
+  http.route({
+    path,
+    method: "POST",
+    handler: httpAction(async (ctx, request) => {
+      if (!authorized(request))
+        return new Response("Unauthorized", { status: 401 });
+      let body: unknown;
+      try {
+        body = await request.json();
+      } catch {
+        return new Response("Invalid JSON", { status: 400 });
+      }
+      try {
+        const result = await ctx.runMutation(fn, body as never);
+        return Response.json({ ok: true, result });
+      } catch (err) {
+        return new Response(
+          err instanceof Error ? err.message : "Bad request",
+          { status: 400 },
+        );
+      }
+    }),
+  });
+}
+
 // Reporter posts a full snapshot here.
-http.route({
-  path: "/report",
-  method: "POST",
-  handler: httpAction(async (ctx, request) => {
-    if (!authorized(request))
-      return new Response("Unauthorized", { status: 401 });
-    let body: unknown;
-    try {
-      body = await request.json();
-    } catch {
-      return new Response("Invalid JSON", { status: 400 });
-    }
-    try {
-      await ctx.runMutation(internal.report.ingest, body as never);
-    } catch (err) {
-      return new Response(err instanceof Error ? err.message : "Bad request", {
-        status: 400,
-      });
-    }
-    return Response.json({ ok: true });
-  }),
-});
+mutationRoute("/report", internal.report.ingest);
+
+// Seed / update a project row.
+mutationRoute("/projects", internal.projects.upsert);
+
+// Lifecycle hooks post here at the moment of truth (takeoff/land/scrub
+// scripts in consumer projects).
+mutationRoute("/flights/takeoff", internal.flights.takeoff);
+mutationRoute("/flights/land", internal.flights.land);
+mutationRoute("/flights/scrub", internal.flights.scrub);
 
 // Reporter fetches its project config from here -- config lives in the
 // registry, never in the public repo.
@@ -50,30 +70,6 @@ http.route({
     const project = await ctx.runQuery(internal.projects.getByName, { name });
     if (!project) return new Response("Unknown project", { status: 404 });
     return Response.json(project);
-  }),
-});
-
-// Seed / update a project row.
-http.route({
-  path: "/projects",
-  method: "POST",
-  handler: httpAction(async (ctx, request) => {
-    if (!authorized(request))
-      return new Response("Unauthorized", { status: 401 });
-    let body: unknown;
-    try {
-      body = await request.json();
-    } catch {
-      return new Response("Invalid JSON", { status: 400 });
-    }
-    try {
-      const id = await ctx.runMutation(internal.projects.upsert, body as never);
-      return Response.json({ ok: true, id });
-    } catch (err) {
-      return new Response(err instanceof Error ? err.message : "Bad request", {
-        status: 400,
-      });
-    }
   }),
 });
 

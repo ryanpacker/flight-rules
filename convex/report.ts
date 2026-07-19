@@ -53,12 +53,15 @@ export const ingest = internalMutation({
     else await ctx.db.insert("towers", towerRow);
 
     for (const f of args.flights) {
-      const existing = await ctx.db
+      // Slugs repeat across landed/scrubbed flights; only the airborne row
+      // (if any) belongs to this snapshot.
+      const rows = await ctx.db
         .query("flights")
         .withIndex("by_project_slug", (q) =>
           q.eq("projectId", projectId).eq("slug", f.slug),
         )
-        .unique();
+        .collect();
+      const existing = rows.find((r) => r.status === "airborne");
       if (existing) {
         await ctx.db.patch(existing._id, {
           worktreePath: f.worktreePath,

@@ -50,6 +50,26 @@ freshness explicitly. Staleness is a first-class, visible concept.
    provider) is a later swap confined to the validation helper.
 5. **Own Convex project** (created in phase 0), separate from any consumer
    project's deployments.
+6. **This repo is the authoritative home for consumer-facing scripts and
+   skills** (decided 2026-07-18). They live in `payload/`: session skills
+   (`flight.takeoff`, `flight.land`, `flight.scrub`, `flight.board`, `atc`)
+   plus generic scripts (`flight.mjs` lifecycle CLI, `report.mjs`). An
+   installer copies the payload into consumer projects -- one real copy in
+   the consumer's `.flight-rules/`, with tool entries (`.claude/skills/*`,
+   later `.cursor/` and Codex) as relative symlinks within the consumer repo.
+   The installer resolves the target path from the registry
+   (`install.mjs <project-name>` -> repoPath). Editing happens here;
+   consumers get updates by reinstalling. npm distribution is a later step
+   (the layout is already npm-shaped, as v1 was).
+7. **Payload config resolution:** payload scripts find the registry via
+   `FLIGHT_RULES_*` env vars, then `.flight-rules/config.json`
+   (`project` + `siteUrl`; never the secret), then the checkout's
+   `.env.local`. The same scripts run unmodified from `payload/scripts/` in
+   this repo and `.flight-rules/scripts/` in a consumer.
+8. **Versioning:** `2.0.0-alpha.N`, bumped when the payload changes; the
+   installer stamps `.flight-rules/VERSION` in consumers. `2.0.0` is cut when
+   phase 2's exit bar is met (lifecycle hooks live in the first consumer,
+   status command cut over, heartbeat running).
 
 ## Schema (phase 1)
 
@@ -117,7 +137,9 @@ requests without the secret are rejected for both reads and writes.
 
 1. **Lifecycle hooks:** takeoff / land / scrub wrap the consumer project's
    worktree scripts and post their own mutations at the moment of truth (they
-   already know slug/port/deployment when it happens).
+   already know slug/port/deployment when it happens). *Registry endpoints,
+   the `flight.mjs` CLI, and the payload skills built 2026-07-18; installer
+   and consumer wiring pending.*
 2. **Command cutover in the consumer project:** its status command stops
    generating static output entirely -- it runs the reporter and prints the
    board link. Session commands adopt the flight vocabulary

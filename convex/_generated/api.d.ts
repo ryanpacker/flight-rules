@@ -9,6 +9,7 @@
  */
 
 import type * as board from "../board.js";
+import type * as flights from "../flights.js";
 import type * as http from "../http.js";
 import type * as lib_secret from "../lib/secret.js";
 import type * as looseEnds from "../looseEnds.js";
@@ -23,6 +24,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   board: typeof board;
+  flights: typeof flights;
   http: typeof http;
   "lib/secret": typeof lib_secret;
   looseEnds: typeof looseEnds;

@@ -1,6 +1,6 @@
 {
   "name": "flight-rules",
-  "version": "2.0.0-alpha.0",
+  "version": "2.0.0-alpha.1",
   "description": "Flight Rules v2: a live coordination plane for AI-assisted, multi-agent software development. Flights, ATC, and the board.",
   "private": true,
   "type": "module",
@@ -9,7 +9,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "report": "node scripts/report.mjs",
+    "report": "node payload/scripts/report.mjs",
     "seed": "node scripts/seed.mjs",
     "format": "prettier --write"
   },

@@ -619,11 +619,24 @@ function EventText({
   const number = typeof p.number === "number" ? p.number : undefined;
   const title = typeof p.title === "string" ? p.title : undefined;
   const version = typeof p.version === "string" ? p.version : undefined;
+  const reason = typeof p.reason === "string" ? p.reason : undefined;
 
   switch (kind) {
+    case "scrub":
+      return (
+        <>
+          {slug && <b className="font-semibold text-ink">{slug}</b>}
+          {slug && (reason ?? branch) && " · "}
+          {reason ??
+            (branch && (
+              <ExtLink href={branchUrl(project, branch)} className={mono}>
+                {branch}
+              </ExtLink>
+            ))}
+        </>
+      );
     case "takeoff":
     case "landing":
-    case "scrub":
       return (
         <>
           {slug && <b className="font-semibold text-ink">{slug}</b>}

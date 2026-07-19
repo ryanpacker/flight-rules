@@ -2,70 +2,33 @@
 // One-shot reporter: gathers a project's state (worktrees, git position,
 // PR list, port/process liveness) and POSTs a snapshot to the registry's
 // HTTP action. Project config comes from the registry -- nothing
-// machine-specific lives in this repo.
+// machine-specific lives in the flight-rules repo.
 //
-// Usage: node scripts/report.mjs <project-name>
+// Usage: report.mjs [project-name]
+// (project defaults to FLIGHT_RULES_PROJECT or .flight-rules/config.json)
 
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import net from "node:net";
-import { basename, dirname, join, resolve, sep } from "node:path";
-import { fileURLToPath } from "node:url";
+import { basename, join, resolve, sep } from "node:path";
 
-const projectName = process.argv[2];
+import {
+  BOARD_URL,
+  loadConfig,
+  parseEnvFile,
+  registryClient,
+} from "./lib/config.mjs";
+
+const config = loadConfig(import.meta.url);
+const projectName = process.argv[2] ?? config.project;
 if (!projectName) {
-  console.error("Usage: node scripts/report.mjs <project-name>");
-  process.exit(1);
-}
-
-// --- config ------------------------------------------------------------------
-
-function parseEnvFile(path) {
-  const env = {};
-  if (!existsSync(path)) return env;
-  for (const line of readFileSync(path, "utf8").split("\n")) {
-    const m = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
-    if (!m) continue;
-    let value = m[2].trim();
-    // strip trailing "# comment" (unquoted values only)
-    if (!value.startsWith('"') && !value.startsWith("'")) {
-      value = value.replace(/\s+#.*$/, "");
-    }
-    value = value.replace(/^(["'])(.*)\1$/, "$2");
-    env[m[1]] = value;
-  }
-  return env;
-}
-
-const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const localEnv = parseEnvFile(join(repoRoot, ".env.local"));
-const siteUrl =
-  process.env.FLIGHT_RULES_SITE_URL ?? localEnv.VITE_CONVEX_SITE_URL;
-const secret =
-  process.env.FLIGHT_RULES_SECRET ?? localEnv.VITE_FLIGHT_RULES_SECRET;
-if (!siteUrl || !secret) {
   console.error(
-    "Missing site URL or secret (set VITE_CONVEX_SITE_URL / VITE_FLIGHT_RULES_SECRET in .env.local).",
+    "Usage: report.mjs [project-name] (or set FLIGHT_RULES_PROJECT / " +
+      ".flight-rules/config.json)",
   );
   process.exit(1);
 }
-
-async function call(path, options = {}) {
-  const res = await fetch(`${siteUrl}${path}`, {
-    ...options,
-    headers: {
-      Authorization: `Bearer ${secret}`,
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
-  });
-  if (!res.ok) {
-    throw new Error(
-      `${options.method ?? "GET"} ${path}: ${res.status} ${await res.text()}`,
-    );
-  }
-  return res.json();
-}
+const call = registryClient(config);
 
 // --- shell helpers -------------------------------------------------------------
 
@@ -257,4 +220,4 @@ for (const f of flights) {
   );
 }
 console.log(`  ${prs.length} PRs`);
-console.log("Board: http://localhost:3999");
+console.log(`Board: ${BOARD_URL}/p/${encodeURIComponent(projectName)}`);
