@@ -172,7 +172,7 @@ function Board({ data, now }: { data: ProjectData; now: number }) {
           className={`flight-grid flight-grid-head ${microlabel} border-b border-hairline px-4 pb-2`}
           aria-hidden="true"
         >
-          <span>Status</span>
+          <span />
           <span>Flight</span>
           <span>Branch · Position</span>
           <span>Env</span>
@@ -422,16 +422,32 @@ function FlightRow({
   const silentMuted = tier === "never" ? "text-ink-3" : "";
 
   const status = !report
-    ? { cls: "text-ink-3 font-[550]", dot: "none" as const, label: "NO REPORT" }
+    ? {
+        cls: "text-ink-3 font-[550]",
+        dot: "none" as const,
+        label: "NO REPORT",
+        title: "No report received yet",
+      }
     : report.listening === true
-      ? { cls: "text-good font-[650]", dot: "good" as const, label: "LISTENING" }
+      ? {
+          cls: "text-good font-[650]",
+          dot: "good" as const,
+          label: "LISTENING",
+          title: "Listening on its port",
+        }
       : report.listening === false
         ? {
             cls: "text-crit font-[650]",
             dot: "crit" as const,
             label: "NOT LISTENING",
+            title: "Not listening — nothing answering on its port",
           }
-        : { cls: "text-ink-3 font-[550]", dot: "none" as const, label: "NO PORT" };
+        : {
+            cls: "text-ink-3 font-[550]",
+            dot: "none" as const,
+            label: "NO PORT",
+            title: "Reporting, but no port assigned",
+          };
 
   const aliveProcs = report
     ? Object.entries(report.processes)
@@ -446,13 +462,19 @@ function FlightRow({
     >
       <span
         className={`inline-flex items-center text-[11px] tracking-[0.06em] whitespace-nowrap ${status.cls}`}
+        title={status.title}
       >
         <Dot tone={status.dot} />
-        {status.label}
+        {/* Dot-only on desktop (title carries the detail); label returns in the
+            stacked mobile layout where hover doesn't exist. */}
+        <span className="sr-only max-[760px]:not-sr-only">{status.label}</span>
       </span>
 
-      <span className="text-[13.5px] font-semibold tracking-[-0.005em]">
-        {flight.slug}
+      <span
+        className="min-w-0 text-[13.5px] font-semibold tracking-[-0.005em]"
+        title={flight.slug}
+      >
+        <span className="line-clamp-2 break-all">{flight.slug}</span>
       </span>
 
       <span className="min-w-0 text-[12.5px]">
@@ -491,25 +513,28 @@ function FlightRow({
         )}
       </span>
 
-      <span className={`text-[12.5px] whitespace-nowrap ${silentMuted}`}>
-        {flight.port !== undefined && (
-          <ExtLink href={portUrl(project, flight.port)} className={mono}>
-            :{flight.port}
-          </ExtLink>
-        )}
-        {flight.port !== undefined && flight.deploymentName && (
-          <span className="mx-1.5 text-ink-3">·</span>
-        )}
-        {flight.deploymentName && (
-          <ExtLink
-            href={deploymentUrl(project, flight.deploymentName)}
-            className={mono}
-          >
-            {flight.deploymentName}
-          </ExtLink>
-        )}
+      <span className={`min-w-0 text-[12.5px] ${silentMuted}`}>
+        <span className="block truncate">
+          {flight.port !== undefined && (
+            <ExtLink href={portUrl(project, flight.port)} className={mono}>
+              :{flight.port}
+            </ExtLink>
+          )}
+          {flight.port !== undefined && flight.deploymentName && (
+            <span className="mx-1.5 text-ink-3">·</span>
+          )}
+          {flight.deploymentName && (
+            <ExtLink
+              href={deploymentUrl(project, flight.deploymentName)}
+              className={mono}
+              title={flight.deploymentName}
+            >
+              {flight.deploymentName}
+            </ExtLink>
+          )}
+        </span>
         {aliveProcs.length > 0 && (
-          <span className="mt-0.5 block text-[11.5px] text-ink-3">
+          <span className="mt-0.5 block truncate text-[11.5px] text-ink-3">
             {aliveProcs.join(" · ")}
           </span>
         )}

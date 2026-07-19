@@ -67,15 +67,26 @@
     column-gap: 24px;
     align-items: center;
   }
+  /* Every column is elastic with a floor so tight widths compress all of
+     them a little instead of crushing the one flexible track to nothing. */
   .flight-grid {
     display: grid;
-    grid-template-columns: 118px 172px 1fr 250px minmax(210px, 0.8fr) 128px;
+    grid-template-columns:
+      24px minmax(150px, 250px) minmax(150px, 1fr) minmax(150px, 230px)
+      minmax(180px, 0.9fr) 110px;
     column-gap: 20px;
     align-items: center;
   }
+  .flight-grid-head > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  /* minmax(0, …): an fr track's auto minimum is min-content, so the activity
+     feed's nowrap rows would force the grid wider than the viewport. */
   .lower-grid {
     display: grid;
-    grid-template-columns: 5fr 7fr;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
     gap: 48px;
   }
 
@@ -89,7 +100,9 @@
   }
   @media (max-width: 1080px) {
     .flight-grid {
-      grid-template-columns: 110px 150px 1fr 210px 120px;
+      grid-template-columns:
+        24px minmax(150px, 230px) minmax(140px, 1fr) minmax(150px, 210px)
+        100px;
     }
     .col-pr {
       display: none;
@@ -97,15 +110,24 @@
   }
   @media (max-width: 960px) {
     .lower-grid {
-      grid-template-columns: 1fr;
+      grid-template-columns: minmax(0, 1fr);
       gap: 32px;
     }
     .projects-grid-head {
       display: none;
     }
+    /* Stack the detail cells in the wide column; without explicit placement
+       auto-flow drops every second cell into the 20px chevron track. */
     .projects-grid {
-      grid-template-columns: 1fr 20px;
+      grid-template-columns: minmax(0, 1fr) 20px;
       row-gap: 8px;
+    }
+    .projects-grid > * {
+      grid-column: 1;
+    }
+    .projects-grid > :last-child {
+      grid-column: 2;
+      grid-row: 1;
     }
   }
   @media (max-width: 760px) {
@@ -113,7 +135,7 @@
       display: none;
     }
     .flight-grid {
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
       row-gap: 6px;
     }
   }

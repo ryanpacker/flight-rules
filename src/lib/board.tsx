@@ -30,7 +30,7 @@ export function useMounted() {
   return mounted;
 }
 
-export function useNow(intervalMs = 20_000) {
+export function useNow(intervalMs = 30_000) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), intervalMs);
@@ -76,10 +76,10 @@ export function reportTier(
   return "fresh";
 }
 
+// Minutes are the finest grain shown: reports arrive every few minutes, so
+// second-level precision is noise. A fresh report reads "0m ago".
 export function formatAge(ms: number) {
-  const s = Math.max(0, Math.floor(ms / 1000));
-  if (s < 60) return `${s}s`;
-  const m = Math.floor(s / 60);
+  const m = Math.max(0, Math.floor(ms / 60_000));
   if (m < 60) return `${m}m`;
   const h = Math.floor(m / 60);
   if (h < 48) return `${h}h`;
@@ -203,14 +203,22 @@ const badgeBase =
 export function ExtLink({
   href,
   className,
+  title,
   children,
 }: {
   href: string;
   className?: string;
+  title?: string;
   children: ReactNode;
 }) {
   return (
-    <a href={href} target="_blank" rel="noreferrer" className={className}>
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      className={className}
+      title={title}
+    >
       {children}
     </a>
   );

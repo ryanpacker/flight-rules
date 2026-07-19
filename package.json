@@ -1,6 +1,6 @@
 {
   "name": "flight-rules",
-  "version": "2.0.0-alpha.2",
+  "version": "2.0.0-alpha.3",
   "description": "Flight Rules v2: a live coordination plane for AI-assisted, multi-agent software development. Flights, ATC, and the board.",
   "private": true,
   "type": "module",
