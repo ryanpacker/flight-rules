@@ -11,6 +11,7 @@
     "test": "vitest run",
     "report": "node payload/scripts/report.mjs",
     "seed": "node scripts/seed.mjs",
+    "install-payload": "node scripts/install.mjs",
     "format": "prettier --write"
   },
   "dependencies": {
