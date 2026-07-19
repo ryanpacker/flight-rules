@@ -151,6 +151,52 @@ fr_hook() { # name slot [cwd]
 }
 
 # ---------------------------------------------------------------------------
+# Registry recording (best-effort, never blocking). The driver records the
+# flight lifecycle in the Flight Rules registry through the sibling payload
+# scripts (flight.mjs, report.mjs) when they are installed next to wt.sh; a
+# missing script is a silent no-op and a failed call warns and continues —
+# environment work never blocks on the registry. A hook may report a
+# backend deployment name by writing it (raw name, no prefix) to
+# $FR_CLAIM_DIR/meta/deployment; the driver patches it into the takeoff
+# record after post-create.
+# ---------------------------------------------------------------------------
+
+fr_registry() { # <script.mjs> [args...]
+  local script="$FR_SELF_DIR/$1"; shift
+  [[ -f $script ]] || return 0
+  command -v node >/dev/null 2>&1 || return 0
+  (cd "$FR_MAIN_PATH" && node "$script" "$@") \
+    || fr_warn "registry: ${script##*/} failed (continuing)"
+}
+
+fr_registry_takeoff() { # slot
+  local slot=$1 slug branch wt port dep_file extra=()
+  slug=$(fr_claim_get "$slot" slug)
+  branch=$(fr_claim_get "$slot" branch)
+  wt=$(fr_claim_get "$slot" worktree)
+  port=$(fr_claim_get "$slot" port)
+  dep_file="$(fr_claim_dir "$slot")/meta/deployment"
+  [[ -s $dep_file ]] && extra=(--deployment "$(cat "$dep_file")")
+  fr_registry flight.mjs takeoff "$slug" --branch "$branch" \
+    --worktree "$wt" --port "$port" ${extra[@]+"${extra[@]}"}
+}
+
+fr_registry_close() { # slot reason — land if the branch's PR merged, else scrub
+  local slot=$1 reason=$2 slug branch merged_pr
+  slug=$(fr_claim_get "$slot" slug)
+  branch=$(fr_claim_get "$slot" branch)
+  merged_pr=$(cd "$FR_MAIN_PATH" && gh pr list --head "$branch" --state merged \
+    --json number --jq '.[0].number // empty' 2>/dev/null || true)
+  if [[ -n $merged_pr ]]; then
+    fr_registry flight.mjs land "$slug" --pr "$merged_pr"
+  else
+    fr_registry flight.mjs scrub "$slug" --reason "$reason"
+  fi
+}
+
+fr_registry_report() { fr_registry report.mjs; }
+
+# ---------------------------------------------------------------------------
 # Worktree create / remove. Git mutations against the shared main checkout
 # are serialized with a stealable lock: concurrent `up`s race for SLOTS
 # atomically (mkdir claims), but fetch/worktree-add/remove contend on git's

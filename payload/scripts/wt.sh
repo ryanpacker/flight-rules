@@ -88,12 +88,15 @@ cmd_up() {
   fi
 
   [[ -d $wt ]] || fr_worktree_add "$slot"
+  fr_registry_takeoff "$slot" # record the flight the moment the worktree exists
 
   fr_claim_set "$slot" status provisioning
   if ! fr_hook post-create "$slot"; then
     fr_claim_set "$slot" status failed-post-create
     fr_die "post-create failed — fix the cause and re-run up (hooks resume)"
   fi
+  # Patch in the backend deployment name if the hook reported one.
+  [[ -s "$(fr_claim_dir "$slot")/meta/deployment" ]] && fr_registry_takeoff "$slot"
 
   fr_claim_set "$slot" status verifying
   if ! fr_hook pre-ready "$slot"; then
@@ -102,6 +105,7 @@ cmd_up() {
   fi
 
   fr_claim_set "$slot" status ready
+  fr_registry_report
   fr_log "READY: slug=$slug slot=$slot port=$port path=$wt"
 }
 
@@ -177,7 +181,9 @@ cmd_down() {
   if ! fr_hook post-remove "$slot" "$FR_MAIN_PATH"; then
     fr_die "post-remove failed — claim retained for inspection"
   fi
+  fr_registry_close "$slot" "worktree removed"
   fr_claim_release "$slot"
+  fr_registry_report
   [[ -n $pr_url ]] && fr_log "published: $pr_url"
   fr_log "done — slot $slot released"
 }
@@ -197,7 +203,9 @@ cmd_prune() {
   if ! fr_hook post-remove "$slot" "$FR_MAIN_PATH"; then
     fr_die "post-remove failed — claim retained for inspection"
   fi
+  fr_registry_close "$slot" "claim pruned"
   fr_claim_release "$slot"
+  fr_registry_report
   fr_log "pruned — slot $slot released"
 }
 
@@ -306,7 +314,9 @@ cmd_reap() {
   if ! fr_hook post-remove "$slot" "$FR_MAIN_PATH"; then
     fr_die "post-remove failed — claim retained for inspection"
   fi
+  fr_registry_close "$slot" "reaped"
   fr_claim_release "$slot"
+  fr_registry_report
   fr_log "reaped — slot $slot released"
 }
 

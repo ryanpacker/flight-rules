@@ -71,6 +71,7 @@ describe("driver lifecycle (scratch repo, fake hooks)", () => {
   let wtRoot: string; // scratch worktreesRoot
   let hookLog: string;
   let ghLog: string;
+  let regLog: string; // registry-recording log (fake flight.mjs / report.mjs)
   let binDir: string; // PATH shim dir (stub gh)
 
   const PORT_BASE = 3900;
@@ -84,6 +85,7 @@ describe("driver lifecycle (scratch repo, fake hooks)", () => {
         FR_NONINTERACTIVE: "1",
         HOOKLOG: hookLog,
         GHLOG: ghLog,
+        REGLOG: regLog,
         ...opts.env,
       },
       encoding: "utf8",
@@ -100,6 +102,7 @@ describe("driver lifecycle (scratch repo, fake hooks)", () => {
         FR_NONINTERACTIVE: "1",
         HOOKLOG: hookLog,
         GHLOG: ghLog,
+        REGLOG: regLog,
       },
       encoding: "utf8",
     });
@@ -112,6 +115,12 @@ describe("driver lifecycle (scratch repo, fake hooks)", () => {
   function hookLines(): Array<string> {
     return fs.existsSync(hookLog)
       ? fs.readFileSync(hookLog, "utf8").trim().split("\n").filter(Boolean)
+      : [];
+  }
+
+  function regLines(): Array<string> {
+    return fs.existsSync(regLog)
+      ? fs.readFileSync(regLog, "utf8").trim().split("\n").filter(Boolean)
       : [];
   }
 
@@ -135,6 +144,7 @@ describe("driver lifecycle (scratch repo, fake hooks)", () => {
     wtRoot = path.join(tmp, "wts");
     hookLog = path.join(tmp, "hooks.log");
     ghLog = path.join(tmp, "gh.log");
+    regLog = path.join(tmp, "registry.log");
     binDir = path.join(tmp, "bin");
 
     execFileSync("git", ["init", "--bare", "--initial-branch=dev", origin]);
@@ -169,7 +179,12 @@ describe("driver lifecycle (scratch repo, fake hooks)", () => {
 
     const trace = (name: string) =>
       `echo "${name} slug=$FR_SLUG slot=$FR_SLOT port=$FR_PORT base=$FR_BASE_SHA wt=$FR_WORKTREE_PATH claim=$FR_CLAIM_DIR main=$FR_MAIN_PATH empty=\${FR_OPT_EMPTY:-} claimjson=$([[ -f $FR_CLAIM_DIR/claim.json ]] && echo yes || echo no) cwd=$PWD" >>"$HOOKLOG"`;
-    writeHook("post-create", trace("post-create"));
+    // post-create can report a backend deployment name (the meta/deployment
+    // convention the driver patches into the takeoff record).
+    writeHook(
+      "post-create",
+      `${trace("post-create")}\n[[ -n "\${DEPLOY_NAME:-}" ]] && printf '%s' "$DEPLOY_NAME" >"$FR_CLAIM_DIR/meta/deployment"\nexit 0`,
+    );
     writeHook("pre-ready", trace("pre-ready"));
     writeHook(
       "pre-finish",
@@ -183,12 +198,20 @@ describe("driver lifecycle (scratch repo, fake hooks)", () => {
     );
     writeHook("post-remove", trace("post-remove"));
 
-    // stub gh
+    // stub gh: `pr list` prints $GH_MERGED (the merged-PR number) or nothing;
+    // everything else behaves like `pr create` and prints a PR URL
     fs.mkdirSync(binDir);
     const gh = path.join(binDir, "gh");
     fs.writeFileSync(
       gh,
-      `#!/usr/bin/env bash\necho "gh $*" >>"$GHLOG"\necho "https://github.com/example/repo/pull/99"\n`,
+      `#!/usr/bin/env bash
+echo "gh $*" >>"$GHLOG"
+if [[ "$1 $2" == "pr list" ]]; then
+  [[ -n "\${GH_MERGED:-}" ]] && echo "$GH_MERGED"
+  exit 0
+fi
+echo "https://github.com/example/repo/pull/99"
+`,
     );
     fs.chmodSync(gh, 0o755);
   });
@@ -317,6 +340,58 @@ describe("driver lifecycle (scratch repo, fake hooks)", () => {
     // leftover branch cleanup for later tests
     git(repo, "branch", "-D", "gamma");
     git(repo, "worktree", "prune");
+  });
+
+  it("registry: takeoff on create, deployment patched in from meta/, land on merged PR, scrub otherwise", () => {
+    // Fake registry scripts next to the driver switch recording on — the
+    // driver calls them best-effort; before this test they were absent and
+    // every lifecycle ran fine without them.
+    fs.writeFileSync(
+      path.join(repo, "scripts", "flight.mjs"),
+      `import fs from "node:fs";\n` +
+        `fs.appendFileSync(process.env.REGLOG, ` +
+        `\`flight \${process.argv.slice(2).join(" ")} cwd=\${process.cwd()}\\n\`);\n`,
+    );
+    fs.writeFileSync(
+      path.join(repo, "scripts", "report.mjs"),
+      `import fs from "node:fs";\nfs.appendFileSync(process.env.REGLOG, "report\\n");\n`,
+    );
+
+    // registry scripts run from the main checkout (cd resolves symlinks,
+    // hence realpath)
+    const mainCwd = fs.realpathSync(repo);
+
+    // up with a hook-reported deployment: takeoff, patch, report
+    run(["up", "delta", "--empty"], { env: { DEPLOY_NAME: "brave-otter-42" } });
+    const wt = path.join(wtRoot, "delta");
+    let lines = regLines();
+    expect(lines).toEqual([
+      `flight takeoff delta --branch delta --worktree ${wt} --port ${PORT_BASE + 1} cwd=${mainCwd}`,
+      `flight takeoff delta --branch delta --worktree ${wt} --port ${PORT_BASE + 1} --deployment brave-otter-42 cwd=${mainCwd}`,
+      "report",
+    ]);
+
+    // down with a merged PR: land --pr <n>, then report
+    fs.rmSync(regLog, { force: true });
+    run(["down", "delta", "--delete-branch"], { env: { GH_MERGED: "42" } });
+    expect(regLines()).toEqual([`flight land delta --pr 42 cwd=${mainCwd}`, "report"]);
+
+    // up without a deployment: single takeoff (no patch), report
+    fs.rmSync(regLog, { force: true });
+    run(["up", "epsilon", "--empty"]);
+    lines = regLines();
+    expect(lines).toEqual([
+      `flight takeoff epsilon --branch epsilon --worktree ${path.join(wtRoot, "epsilon")} --port ${PORT_BASE + 1} cwd=${mainCwd}`,
+      "report",
+    ]);
+
+    // down with no merged PR: scrub with the reason, then report
+    fs.rmSync(regLog, { force: true });
+    run(["down", "epsilon", "--delete-branch"]);
+    expect(regLines()).toEqual([
+      `flight scrub epsilon --reason worktree removed cwd=${mainCwd}`,
+      "report",
+    ]);
   });
 
   it("race: concurrent ups claim distinct slots", { timeout: 60_000 }, async () => {
