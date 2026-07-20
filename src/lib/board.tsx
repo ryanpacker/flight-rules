@@ -53,6 +53,9 @@ export function branchUrl(project: Project, branch: string) {
 export function prUrl(project: Project, number: number) {
   return `https://github.com/${project.githubRepo}/pull/${number}`;
 }
+export function commitUrl(project: Project, sha: string) {
+  return `https://github.com/${project.githubRepo}/commit/${sha}`;
+}
 export function repoUrl(project: Project) {
   return `https://github.com/${project.githubRepo}`;
 }
@@ -65,10 +68,7 @@ export const DORMANT_MS = 24 * 3_600_000;
 
 export type Tier = "fresh" | "aging" | "stale" | "never";
 
-export function reportTier(
-  reportedAt: number | undefined,
-  now: number,
-): Tier {
+export function reportTier(reportedAt: number | undefined, now: number): Tier {
   if (reportedAt === undefined) return "never";
   const age = now - reportedAt;
   if (age >= STALE_MS) return "stale";
@@ -142,7 +142,11 @@ const WORDS = [
   "twelve",
 ];
 
-export function countNoun(n: number, singular: string, plural = `${singular}s`) {
+export function countNoun(
+  n: number,
+  singular: string,
+  plural = `${singular}s`,
+) {
   return `${WORDS[n] ?? n} ${n === 1 ? singular : plural}`;
 }
 

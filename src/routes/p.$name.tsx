@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, createFileRoute } from "@tanstack/react-router";
 
 import {
@@ -8,6 +9,7 @@ import {
   SilentBadge,
   StaleBadge,
   branchUrl,
+  commitUrl,
   deploymentUrl,
   formatAge,
   hasSecret,
@@ -86,15 +88,25 @@ function Board({ data, now }: { data: ProjectData; now: number }) {
   const titleRef = useFocusTitle();
   const { project, tower, looseEnds, events } = data;
   const stats = projectStats(data, now);
-  const { flights, listening, down, stale, noReport, freshest, openPrs, draftPrs, dormant } =
-    stats;
+  const {
+    flights,
+    listening,
+    down,
+    stale,
+    noReport,
+    freshest,
+    openPrs,
+    draftPrs,
+    dormant,
+  } = stats;
 
   const summaryFrags: Array<ReactNode> = [
     <span key="f">
       {flights.length} {flights.length === 1 ? "flight" : "flights"}
     </span>,
   ];
-  if (listening > 0) summaryFrags.push(<span key="l">{listening} listening</span>);
+  if (listening > 0)
+    summaryFrags.push(<span key="l">{listening} listening</span>);
   if (down > 0) summaryFrags.push(<span key="d">{down} down</span>);
   if (dormant) {
     summaryFrags.push(
@@ -154,9 +166,9 @@ function Board({ data, now }: { data: ProjectData; now: number }) {
             Project quiet
           </strong>
           <span className="font-normal text-warn-ink">
-            Nothing on this project has reported in{" "}
-            {formatAge(now - freshest)}. Everything below is what was last
-            observed — it may no longer be true.
+            Nothing on this project has reported in {formatAge(now - freshest)}.
+            Everything below is what was last observed — it may no longer be
+            true.
           </span>
         </div>
       )}
@@ -251,7 +263,11 @@ function Board({ data, now }: { data: ProjectData; now: number }) {
                     {EVENT_META[e.kind]?.label ?? e.kind}
                   </span>
                   <span className="min-w-0 flex-1 truncate text-ink-2">
-                    <EventText project={project} kind={e.kind} payload={e.payload} />
+                    <EventText
+                      project={project}
+                      kind={e.kind}
+                      payload={e.payload}
+                    />
                   </span>
                   <span className="w-[34px] flex-none text-right text-[11.5px] text-ink-3 tabular-nums">
                     {formatAge(now - e.at)}
@@ -477,41 +493,13 @@ function FlightRow({
         <span className="line-clamp-2 break-all">{flight.slug}</span>
       </span>
 
-      <span className="min-w-0 text-[12.5px]">
-        <ExtLink
-          href={branchUrl(project, flight.branch)}
-          className={`${mono} block overflow-hidden whitespace-nowrap text-ellipsis`}
-        >
-          {flight.branch}
-        </ExtLink>
-        {report ? (
-          <span
-            className={`mt-0.5 block text-xs tabular-nums ${silentMuted || "text-ink-2"}`}
-          >
-            ↑{report.ahead}{" "}
-            <span
-              className={
-                report.behind >= 10 ? "font-semibold text-warn" : undefined
-              }
-            >
-              ↓{report.behind}
-            </span>{" "}
-            ·{" "}
-            {report.dirtyCount === 0 ? (
-              <span className="text-[11.5px] text-ink-3">clean</span>
-            ) : (
-              <span className="text-[11.5px] font-semibold text-warn">
-                {report.dirtyCount} dirty{" "}
-                {report.dirtyCount === 1 ? "file" : "files"}
-              </span>
-            )}
-          </span>
-        ) : (
-          <span className="mt-0.5 block text-xs text-ink-3 italic">
-            position unknown
-          </span>
-        )}
-      </span>
+      <PositionCell
+        project={project}
+        flight={flight}
+        pr={pr}
+        now={now}
+        silentMuted={silentMuted}
+      />
 
       <span className={`min-w-0 text-[12.5px] ${silentMuted}`}>
         <span className="block truncate">
@@ -590,6 +578,257 @@ function FlightRow({
   );
 }
 
+// --- Branch · Position hovercard ----------------------------------------------
+
+// One card pinned at a time, across all rows.
+let unpinActive: (() => void) | undefined;
+
+const factLabel =
+  "mb-0.5 text-[10.5px] font-semibold tracking-[0.08em] uppercase text-ink-3";
+
+function PositionCell({
+  project,
+  flight,
+  pr,
+  now,
+  silentMuted,
+}: {
+  project: Project;
+  flight: Flight;
+  pr: Pr | undefined;
+  now: number;
+  silentMuted: string;
+}) {
+  const report = flight.report;
+  const tier = reportTier(report?.reportedAt, now);
+  const cellRef = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [pinned, setPinned] = useState(false);
+  const [flip, setFlip] = useState(false);
+  const unpin = useCallback(() => setPinned(false), []);
+
+  // Flip the card above the cell when it would overflow the viewport bottom.
+  const place = useCallback(() => {
+    const cell = cellRef.current;
+    const card = cardRef.current;
+    if (!cell || !card) return;
+    const bottom =
+      cell.getBoundingClientRect().bottom +
+      6 +
+      card.getBoundingClientRect().height;
+    setFlip(bottom > window.innerHeight - 12);
+  }, []);
+
+  const togglePin = () => {
+    if (pinned) {
+      setPinned(false);
+      if (unpinActive === unpin) unpinActive = undefined;
+    } else {
+      unpinActive?.();
+      unpinActive = unpin;
+      place();
+      setPinned(true);
+    }
+  };
+
+  // While pinned: outside-click and Escape dismiss, wherever focus is.
+  useEffect(() => {
+    if (!pinned) return;
+    const onClick = (e: MouseEvent) => {
+      if (cellRef.current?.contains(e.target as Node)) return;
+      unpin();
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") unpin();
+    };
+    document.addEventListener("click", onClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("click", onClick);
+      document.removeEventListener("keydown", onKey);
+      if (unpinActive === unpin) unpinActive = undefined;
+    };
+  }, [pinned, unpin]);
+
+  if (!report) {
+    return (
+      <span className="min-w-0 text-[12.5px]">
+        <ExtLink
+          href={branchUrl(project, flight.branch)}
+          className={`${mono} block w-fit max-w-full overflow-hidden whitespace-nowrap text-ellipsis`}
+        >
+          {flight.branch}
+        </ExtLink>
+        <span className="mt-0.5 block text-xs text-ink-3 italic">
+          position unknown
+        </span>
+      </span>
+    );
+  }
+
+  const commits = report.lastCommits;
+  return (
+    <div
+      ref={cellRef}
+      className={`cell-branch min-w-0 text-[12.5px] ${pinned ? "pinned" : ""} ${flip ? "flip" : ""}`}
+      onMouseEnter={place}
+      onFocus={place}
+      // :focus-within also holds the card open — Escape must really dismiss.
+      onKeyDown={(e) => {
+        if (e.key !== "Escape") return;
+        if (pinned) togglePin();
+        const active = document.activeElement;
+        if (active instanceof HTMLElement && cellRef.current?.contains(active))
+          active.blur();
+      }}
+    >
+      <ExtLink
+        href={branchUrl(project, flight.branch)}
+        className={`${mono} block w-fit max-w-full overflow-hidden whitespace-nowrap text-ellipsis`}
+      >
+        {flight.branch}
+      </ExtLink>
+      <button
+        type="button"
+        aria-haspopup="true"
+        aria-expanded={pinned}
+        onClick={togglePin}
+        className={`position-trigger mt-0.5 text-xs tabular-nums ${silentMuted || "text-ink-2"}`}
+      >
+        ↑{report.ahead}{" "}
+        <span
+          className={
+            report.behind >= 10 ? "font-semibold text-warn" : undefined
+          }
+        >
+          ↓{report.behind}
+        </span>{" "}
+        ·{" "}
+        {report.dirtyCount === 0 ? (
+          <span className="text-[11.5px] text-ink-3">clean</span>
+        ) : (
+          <span className="text-[11.5px] font-semibold text-warn">
+            {report.dirtyCount} dirty{" "}
+            {report.dirtyCount === 1 ? "file" : "files"}
+          </span>
+        )}
+      </button>
+
+      <div
+        ref={cardRef}
+        role="group"
+        aria-label={`${flight.slug} branch detail`}
+        className="hovercard tabular-nums"
+      >
+        <div className="rounded-t-md border-b border-hairline bg-panel px-3.5 pt-2.5 pb-[9px]">
+          <span className={`${microlabel} mb-[3px] block`}>Branch</span>
+          <ExtLink
+            href={branchUrl(project, flight.branch)}
+            className={`${mono} inline-block max-w-full text-[13px] [overflow-wrap:anywhere]`}
+          >
+            {flight.branch}
+          </ExtLink>
+        </div>
+
+        <dl className="grid grid-cols-2 gap-x-5 gap-y-2.5 px-3.5 pt-[11px] pb-3">
+          <div>
+            <dt className={factLabel}>Position</dt>
+            <dd className="text-[12.5px]">
+              {report.ahead} {report.ahead === 1 ? "commit" : "commits"} ahead
+              of{" "}
+              <ExtLink
+                href={branchUrl(project, project.integrationBranch)}
+                className={mono}
+              >
+                {project.integrationBranch}
+              </ExtLink>
+              ,{" "}
+              <span
+                className={`whitespace-nowrap ${
+                  report.behind >= 10 ? "font-semibold text-warn" : "text-ink-2"
+                }`}
+              >
+                {report.behind} behind
+              </span>
+            </dd>
+          </div>
+          <div>
+            <dt className={factLabel}>Worktree</dt>
+            <dd className="text-[12.5px]">
+              {report.dirtyCount === 0 ? (
+                <span className="text-[11.5px] text-ink-3">clean</span>
+              ) : (
+                <span className="text-[11.5px] font-semibold text-warn">
+                  {report.dirtyCount} dirty{" "}
+                  {report.dirtyCount === 1 ? "file" : "files"}
+                </span>
+              )}
+            </dd>
+          </div>
+          <div>
+            <dt className={factLabel}>PR</dt>
+            <dd className="text-[12.5px]">
+              {pr ? (
+                <>
+                  <ExtLink href={prUrl(project, pr.number)} className={mono}>
+                    #{pr.number}
+                  </ExtLink>
+                  <PrState pr={pr} />{" "}
+                  <span className="text-ink-2">{pr.title}</span>
+                </>
+              ) : (
+                <span className="text-xs text-ink-3">no PR</span>
+              )}
+            </dd>
+          </div>
+          <div>
+            <dt className={factLabel}>Reported</dt>
+            <dd className="text-[12.5px]">
+              {tier === "stale" ? (
+                <>
+                  <span className="font-[650] text-warn">
+                    {formatAge(now - report.reportedAt)} ago
+                  </span>{" "}
+                  <StaleBadge />
+                </>
+              ) : tier === "aging" ? (
+                <>
+                  <span className="text-warn">
+                    {formatAge(now - report.reportedAt)} ago
+                  </span>{" "}
+                  <AgingBadge />
+                </>
+              ) : (
+                <>{formatAge(now - report.reportedAt)} ago</>
+              )}
+            </dd>
+          </div>
+        </dl>
+
+        {commits.length > 0 && (
+          <div className="border-t border-hairline px-3.5 pt-2.5 pb-3">
+            <span className={`${microlabel} mb-1.5 block`}>
+              Last {commits.length}{" "}
+              {commits.length === 1 ? "commit" : "commits"}
+            </span>
+            {commits.map((c) => (
+              <div
+                key={c.sha}
+                className="mt-1 overflow-hidden text-[12.5px] whitespace-nowrap text-ellipsis first:mt-0"
+              >
+                <ExtLink href={commitUrl(project, c.sha)} className={mono}>
+                  {c.sha}
+                </ExtLink>{" "}
+                {c.subject}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // Badges stack under the age so nothing overflows the column.
 function BadgeSlot({ children }: { children: ReactNode }) {
   return (
@@ -605,10 +844,7 @@ function PrState({ pr }: { pr: Pr }) {
     : pr.state === "OPEN"
       ? "open"
       : pr.state.toLowerCase();
-  const cls =
-    label === "open"
-      ? "text-good bg-good-bg"
-      : "text-ink-2 bg-chip";
+  const cls = label === "open" ? "text-good bg-good-bg" : "text-ink-2 bg-chip";
   return (
     <span
       className={`ml-1.5 inline-block rounded-[3px] px-[5px] align-[1px] text-[10.5px] font-[650] tracking-[0.06em] uppercase ${cls}`}
