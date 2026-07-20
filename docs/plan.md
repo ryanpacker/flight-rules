@@ -52,7 +52,7 @@ freshness explicitly. Staleness is a first-class, visible concept.
    project's deployments.
 6. **This repo is the authoritative home for consumer-facing scripts and
    skills** (decided 2026-07-18). They live in `payload/`: session skills
-   (`flight.takeoff`, `flight.land`, `flight.scrub`, `flight.board`, `atc`)
+   (`flight.takeoff`, `flight.land`, `flight.scrub`, `flight.report`, `atc`)
    plus generic scripts (`flight.mjs` lifecycle CLI, `report.mjs`). An
    installer copies the payload into consumer projects -- one real copy in
    the consumer's `.flight-rules/`, with tool entries (`.claude/skills/*`,
@@ -69,7 +69,7 @@ freshness explicitly. Staleness is a first-class, visible concept.
 8. **Versioning:** `2.0.0-alpha.N`, bumped when the payload changes; the
    installer stamps `.flight-rules/VERSION` in consumers. `2.0.0` is cut when
    phase 2's exit bar is met (lifecycle hooks live in the first consumer,
-   status command cut over, heartbeat running).
+   status command cut over).
 
 ## Schema (phase 1)
 
@@ -163,9 +163,13 @@ that strains this one -- no speculative generality before then.
    generating static output entirely -- it runs the reporter and prints the
    board link. Session commands adopt the flight vocabulary
    (`/flight.takeoff`, `/flight.land`, `/flight.scrub`, `/atc`,
-   `/flight.board`).
-3. **Heartbeat:** a scheduled run of the reporter every few minutes for
-   process-liveness freshness.
+   `/flight.report`).
+3. **Heartbeat: dropped from scope (2026-07-19).** No cron/launchd daemon --
+   skill-driven writes at lifecycle moments plus on-demand reporter runs keep
+   the board fresh enough, and staleness is visible by design. If away-from-
+   keyboard freshness is ever wanted, the candidate shape is the ATC session
+   keeping a recurring reporter loop while on duty (dies with the session, no
+   machine-level install).
 4. **Later:** a real watcher daemon (consumer projects may have their own
    watcher designs -- align them with this schema rather than diverging), and
    migration of the v1 conventions machinery into v2.
