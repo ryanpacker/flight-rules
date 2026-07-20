@@ -152,18 +152,25 @@ server + an optional per-flight backend deployment, driven by `wt.sh` and
 provisioned by the consumer's hooks. Archetype #2 waits for a real project
 that strains this one -- no speculative generality before then.
 
-### Phase 2 -- instrumentation
+### Phase 2 -- instrumentation (DONE 2026-07-19; exit bar met, 2.0.0 cut)
+
+Exit bar verified by a live shakedown flight in the first consumer
+(2026-07-19): full takeoff (deployment created, name patched into the
+registry row, reporter, board live), scrub (claim released, process tree
+killed, event pair recorded), and landing proven by real use (a flight
+landed via its merged PR earlier the same day).
 
 1. **Lifecycle hooks:** takeoff / land / scrub wrap the consumer project's
    worktree scripts and post their own mutations at the moment of truth (they
-   already know slug/port/deployment when it happens). *Registry endpoints,
-   the `flight.mjs` CLI, and the payload skills built 2026-07-18; installer
-   and consumer wiring pending.*
+   already know slug/port/deployment when it happens). *Done via phase 2.5:
+   registry recording is driver behavior; driver installed and live in the
+   first consumer.*
 2. **Command cutover in the consumer project:** its status command stops
    generating static output entirely -- it runs the reporter and prints the
    board link. Session commands adopt the flight vocabulary
    (`/flight.takeoff`, `/flight.land`, `/flight.scrub`, `/atc`,
-   `/flight.report`).
+   `/flight.report`). *Done 2026-07-18: legacy status/create/remove commands
+   deleted, coordinator command slimmed to project-side ground rules.*
 3. **Heartbeat: dropped from scope (2026-07-19).** No cron/launchd daemon --
    skill-driven writes at lifecycle moments plus on-demand reporter runs keep
    the board fresh enough, and staleness is visible by design. If away-from-
