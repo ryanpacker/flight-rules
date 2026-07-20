@@ -23,6 +23,7 @@ import {
   mkdirSync,
   readFileSync,
   readdirSync,
+  readlinkSync,
   rmSync,
   symlinkSync,
   unlinkSync,
@@ -120,6 +121,24 @@ for (const name of skillNames) {
   linked.push(name);
 }
 
+// Prune links into .flight-rules/skills whose skill no longer exists in the
+// payload (e.g. renames). Consumer-owned links pointing elsewhere are kept.
+const pruned = [];
+for (const name of readdirSync(claudeSkills)) {
+  if (skillNames.includes(name)) continue;
+  const linkPath = join(claudeSkills, name);
+  const existing = lstatSync(linkPath, { throwIfNoEntry: false });
+  if (!existing?.isSymbolicLink()) continue;
+  const target = resolve(claudeSkills, readlinkSync(linkPath));
+  if (
+    (target + sep).startsWith(join(frDir, "skills") + sep) &&
+    !existsSync(target)
+  ) {
+    unlinkSync(linkPath);
+    pruned.push(name);
+  }
+}
+
 console.log(
   `Installed flight-rules ${version}` +
     (previous && previous !== version ? ` (was ${previous})` : "") +
@@ -131,6 +150,9 @@ console.log(`  .flight-rules/config.json: ${configNote}`);
 console.log(
   `  .claude/skills: ${linked.length ? `linked ${linked.join(", ")}` : "no new links"}`,
 );
+if (pruned.length) {
+  console.log(`  pruned stale links: ${pruned.join(", ")}`);
+}
 if (skipped.length) {
   console.log(
     `  warning: not symlinks, left alone: ${skipped

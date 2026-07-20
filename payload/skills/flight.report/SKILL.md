@@ -1,6 +1,6 @@
 ---
-name: flight.board
-description: Refresh and open the Flight Rules board — the live dashboard of this project's flights, tower, loose ends, and activity. Use when asked for project status, what's flying, or "the board".
+name: flight.report
+description: Report current state to the registry and open the Flight Rules board — the live dashboard of this project's flights, tower, loose ends, and activity. Use when asked for project status, what's flying, or "the board".
 ---
 
 # The board
