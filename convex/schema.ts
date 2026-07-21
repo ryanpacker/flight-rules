@@ -56,6 +56,15 @@ export default defineSchema({
     branch: v.string(),
     dirtyCount: v.number(),
     unpushedCount: v.number(),
+    // Commits the checkout lags its upstream -- nonzero means work merged on
+    // GitHub isn't in the tower's running environment yet.
+    behindUpstream: v.optional(v.number()),
+    // The tower's own dev environment, observed the same way a flight's is
+    // (port/deployment from the checkout's env, liveness probed).
+    port: v.optional(v.number()),
+    deploymentName: v.optional(v.string()),
+    listening: v.optional(v.boolean()),
+    processes: v.optional(v.record(v.string(), v.boolean())),
     devVersion: v.optional(v.string()),
     prodVersion: v.optional(v.string()),
     reportedAt: v.number(),

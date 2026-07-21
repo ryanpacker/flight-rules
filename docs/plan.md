@@ -84,7 +84,10 @@ All tables project-scoped from day one; the first consumer is one row in
   (name → alive/dead), dirtyCount, ahead/behind vs the integration branch,
   last commits (sha + subject), prNumber.
 - `towers` -- one row per project: branch, dirtyCount, unpushedCount, dev
-  version, prod version, reportedAt.
+  version, prod version, reportedAt; plus the tower's own dev environment
+  (port, deploymentName, listening, processes -- observed the same way a
+  flight's is, from `.env.local` in the main checkout) and behindUpstream
+  (commits the checkout lags origin, i.e. merged-but-not-pulled work).
 - `prs` -- projectId, number, title, headRef, state, isDraft, updatedAt.
   Joined to flights by branch.
 - `looseEnds` -- projectId, text, source attribution, createdAt, resolvedAt.

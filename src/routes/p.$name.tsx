@@ -296,28 +296,43 @@ function TowerBand({
   dormant: boolean;
 }) {
   const towerAge = tower ? now - tower.reportedAt : undefined;
+  const aliveProcs = tower?.processes
+    ? Object.entries(tower.processes)
+        .filter(([, alive]) => alive)
+        .map(([name]) => name)
+    : [];
+  const behind = tower?.behindUpstream;
+  // The card takes the warn treatment whenever its running code is suspect:
+  // merged-but-unpulled work (behind origin) or a dormant project.
+  const tinted = dormant || (behind !== undefined && behind > 0);
   return (
     <section
-      className={`tower-band mt-5 flex flex-wrap items-center gap-10 rounded-md border px-5 pt-3.5 pb-[15px] max-[960px]:gap-6 ${
-        dormant ? "border-warn-line bg-warn-bg" : "border-hairline bg-panel"
+      className={`tower-band mt-5 flex flex-wrap items-start gap-x-7 gap-y-3 rounded-md border px-5 pt-3 pb-3.5 max-[960px]:gap-x-6 ${
+        tinted ? "border-warn-line bg-warn-bg" : "border-hairline bg-panel"
       }`}
       aria-label="Tower status"
     >
-      <div className="flex min-w-[118px] items-center gap-2.5">
-        <span className={`${microlabel} text-ink-2`}>Tower</span>
-        {tower && (
-          <ExtLink href={branchUrl(project, tower.branch)} className={mono}>
-            {tower.branch}
-          </ExtLink>
-        )}
+      <div className="min-w-[150px]">
+        <p className="text-[15px] leading-[1.3] font-[650] tracking-[-0.005em]">
+          Tower
+        </p>
+        <p className="mt-[3px] text-xs text-ink-2">
+          main worktree
+          {tower && (
+            <>
+              {" · "}
+              <ExtLink href={branchUrl(project, tower.branch)} className={mono}>
+                {tower.branch}
+              </ExtLink>
+            </>
+          )}
+        </p>
       </div>
       {tower ? (
         <>
-          <dl className="m-0 flex flex-wrap gap-10">
-            <div>
-              <dt className="mb-0.5 text-[10.5px] font-semibold tracking-[0.08em] uppercase text-ink-3">
-                Worktree
-              </dt>
+          <dl className="m-0 flex flex-wrap gap-x-7 gap-y-3">
+            <div className="border-l border-hairline pl-7">
+              <dt className={factLabel}>Checkout</dt>
               <dd className="text-[13px] tabular-nums">
                 {tower.dirtyCount === 0 ? (
                   <span className="text-[11.5px] text-ink-3">clean</span>
@@ -338,49 +353,89 @@ function TowerBand({
                   {tower.unpushedCount} unpushed
                 </span>
               </dd>
+              {behind !== undefined && (
+                <dd className="mt-1 text-[11.5px] text-ink-3 tabular-nums">
+                  {behind === 0 ? (
+                    <>up to date with origin</>
+                  ) : (
+                    <span className="inline-block rounded border border-warn-line bg-warn-bg px-2 py-0.5 text-xs whitespace-nowrap text-warn">
+                      {behind} behind — pull to update
+                    </span>
+                  )}
+                </dd>
+              )}
             </div>
-            {tower.devVersion && (
-              <div>
-                <dt className="mb-0.5 text-[10.5px] font-semibold tracking-[0.08em] uppercase text-ink-3">
-                  Dev
-                </dt>
-                <dd className={`text-[13px] tabular-nums ${mono}`}>
-                  v{tower.devVersion}
-                </dd>
-              </div>
-            )}
-            {tower.prodVersion && (
-              <div>
-                <dt className="mb-0.5 text-[10.5px] font-semibold tracking-[0.08em] uppercase text-ink-3">
-                  Prod
-                </dt>
-                <dd className={`text-[13px] tabular-nums ${mono}`}>
-                  {project.prodUrl ? (
-                    <ExtLink href={project.prodUrl}>
-                      v{tower.prodVersion}
+            {(tower.port !== undefined || tower.deploymentName) && (
+              <div className="border-l border-hairline pl-7">
+                <dt className={factLabel}>Environment</dt>
+                <dd className="text-[13px]">
+                  {tower.port !== undefined && (
+                    <span
+                      title={
+                        tower.listening
+                          ? "Listening on its port"
+                          : "Not listening — nothing answering on its port"
+                      }
+                    >
+                      <Dot tone={tower.listening ? "good" : "crit"} />
+                      <ExtLink
+                        href={portUrl(project, tower.port)}
+                        className={mono}
+                      >
+                        :{tower.port}
+                      </ExtLink>
+                    </span>
+                  )}
+                  {tower.port !== undefined && tower.deploymentName && (
+                    <span className="mx-1.5 text-ink-3">·</span>
+                  )}
+                  {tower.deploymentName && (
+                    <ExtLink
+                      href={deploymentUrl(project, tower.deploymentName)}
+                      className={mono}
+                      title={tower.deploymentName}
+                    >
+                      {tower.deploymentName}
                     </ExtLink>
-                  ) : (
-                    <>v{tower.prodVersion}</>
                   )}
                 </dd>
+                {aliveProcs.length > 0 && (
+                  <dd className="mt-0.5 max-w-[220px] truncate text-[11.5px] text-ink-3">
+                    {aliveProcs.join(" · ")}
+                  </dd>
+                )}
               </div>
             )}
-            {tower.devVersion && tower.prodVersion && (
-              <div>
-                <dt className="mb-0.5 text-[10.5px] font-semibold tracking-[0.08em] uppercase text-ink-3">
-                  Version drift
-                </dt>
+            {(tower.devVersion || tower.prodVersion) && (
+              <div className="border-l border-hairline pl-7">
+                <dt className={factLabel}>Release</dt>
                 <dd className="text-[13px] tabular-nums">
-                  {tower.devVersion === tower.prodVersion ? (
-                    <span className="text-xs text-ink-3">
-                      dev and prod in sync
-                    </span>
-                  ) : (
-                    <span className="rounded border border-warn-line bg-warn-bg px-2 py-0.5 text-xs whitespace-nowrap text-warn">
-                      prod is behind dev
-                    </span>
+                  {tower.devVersion && (
+                    <span className={mono}>dev v{tower.devVersion}</span>
                   )}
+                  {tower.devVersion && tower.prodVersion && (
+                    <span className="mx-1.5 text-ink-3">·</span>
+                  )}
+                  {tower.prodVersion &&
+                    (project.prodUrl ? (
+                      <ExtLink href={project.prodUrl} className={mono}>
+                        prod v{tower.prodVersion}
+                      </ExtLink>
+                    ) : (
+                      <span className={mono}>prod v{tower.prodVersion}</span>
+                    ))}
                 </dd>
+                {tower.devVersion && tower.prodVersion && (
+                  <dd className="mt-0.5 text-[11.5px]">
+                    {tower.devVersion === tower.prodVersion ? (
+                      <span className="text-ink-3">dev and prod in sync</span>
+                    ) : (
+                      <span className="font-semibold text-warn">
+                        prod is behind dev
+                      </span>
+                    )}
+                  </dd>
+                )}
               </div>
             )}
           </dl>

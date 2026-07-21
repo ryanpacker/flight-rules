@@ -102,6 +102,22 @@ try {
 const portVar = reportConfig.portVar ?? "PORT";
 const { deploymentVar, deploymentStripPrefix } = reportConfig;
 
+// A checkout declares its env identifiers the same way whether it's a flight
+// worktree or the tower: portVar/deploymentVar in its .env.local.
+function envIdentifiers(dir) {
+  const env = parseEnvFile(join(dir, ".env.local"));
+  const port = env[portVar] ? Number(env[portVar]) : undefined;
+  let deploymentName = deploymentVar ? env[deploymentVar] : undefined;
+  if (
+    deploymentName &&
+    deploymentStripPrefix &&
+    deploymentName.startsWith(deploymentStripPrefix)
+  ) {
+    deploymentName = deploymentName.slice(deploymentStripPrefix.length);
+  }
+  return { port, deploymentName };
+}
+
 function readPackageVersion(dir) {
   try {
     return JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).version;
@@ -110,12 +126,36 @@ function readPackageVersion(dir) {
   }
 }
 
+// Refresh remote-tracking refs so behind-upstream reflects GitHub now, not
+// whenever something last fetched. Best-effort with a hard timeout -- the
+// reporter must not hang on a network stall or a credential prompt.
+try {
+  execFileSync("git", ["-C", repoPath, "fetch", "--quiet"], {
+    encoding: "utf8",
+    timeout: 15_000,
+    env: { ...process.env, GIT_TERMINAL_PROMPT: "0" },
+  });
+} catch {
+  console.warn("warning: git fetch failed; behind-upstream may be stale");
+}
+const behindOut = git(repoPath, "rev-list", "--count", "HEAD..@{upstream}");
+
+const towerEnv = envIdentifiers(repoPath);
 const tower = {
   branch: git(repoPath, "rev-parse", "--abbrev-ref", "HEAD") ?? "unknown",
   dirtyCount: countLines(git(repoPath, "status", "--porcelain")),
   unpushedCount: Number(
     git(repoPath, "rev-list", "--count", "@{upstream}..HEAD") ?? 0,
   ),
+  behindUpstream: behindOut === null ? undefined : Number(behindOut),
+  port: towerEnv.port,
+  deploymentName: towerEnv.deploymentName,
+  listening:
+    towerEnv.port !== undefined ? await checkPort(towerEnv.port) : undefined,
+  processes:
+    towerEnv.port !== undefined
+      ? listeningProcesses(towerEnv.port)
+      : undefined,
   devVersion: readPackageVersion(repoPath),
 };
 
@@ -172,16 +212,7 @@ const flightWorktrees = worktrees.filter(
 const flights = [];
 for (const wt of flightWorktrees) {
   const slug = basename(wt.path);
-  const env = parseEnvFile(join(wt.path, ".env.local"));
-  const port = env[portVar] ? Number(env[portVar]) : undefined;
-  let deploymentName = deploymentVar ? env[deploymentVar] : undefined;
-  if (
-    deploymentName &&
-    deploymentStripPrefix &&
-    deploymentName.startsWith(deploymentStripPrefix)
-  ) {
-    deploymentName = deploymentName.slice(deploymentStripPrefix.length);
-  }
+  const { port, deploymentName } = envIdentifiers(wt.path);
   const branch = wt.branch ?? "detached";
 
   const counts = git(
@@ -239,7 +270,12 @@ await call("/report", { method: "POST", body: JSON.stringify(snapshot) });
 
 console.log(`Reported ${projectName}:`);
 console.log(
-  `  tower: ${tower.branch} (${tower.dirtyCount} dirty, ${tower.unpushedCount} unpushed)`,
+  `  tower: ${tower.branch} (${tower.dirtyCount} dirty, ${tower.unpushedCount} unpushed` +
+    (tower.behindUpstream ? `, ${tower.behindUpstream} behind origin` : "") +
+    ")" +
+    (tower.port !== undefined
+      ? `, port ${tower.port} ${tower.listening ? "listening" : "down"}`
+      : ""),
 );
 for (const f of flights) {
   const r = f.report;
