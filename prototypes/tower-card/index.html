@@ -1,0 +1,68 @@
+<title>Tower card — in-context variants</title>
+<style>
+  :root {
+    --paper: #faf8f4;
+    --ink: #23201b;
+    --hairline: #e8e2d8;
+    --accent: #15616a;
+    --ink-2: color-mix(in srgb, #23201b 64%, #faf8f4);
+    --ink-3: color-mix(in srgb, #23201b 45%, #faf8f4);
+    --panel: color-mix(in srgb, #23201b 3.5%, #faf8f4);
+    --display: Charter, "Iowan Old Style", Palatino, Georgia, serif;
+    --sans: system-ui, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: var(--paper); color: var(--ink); font-family: var(--sans); padding: 56px 32px; font-size: 14px; }
+  main { max-width: 720px; margin: 0 auto; }
+  h1 { font-family: var(--display); font-size: 26px; font-weight: 400; }
+  p.sub { color: var(--ink-2); font-size: 13.5px; margin-top: 10px; line-height: 1.5; }
+  ol { list-style: none; margin-top: 28px; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+  li a {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    padding: 15px 18px;
+    background: var(--panel);
+    border: 1px solid var(--hairline);
+    border-radius: 6px;
+    text-decoration: none;
+    color: var(--ink);
+  }
+  li a:hover { border-color: var(--accent); }
+  li a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  li .n { font-family: var(--mono); color: var(--accent); font-size: 13px; }
+  li .name { font-weight: 600; font-size: 14.5px; white-space: nowrap; }
+  li .desc { color: var(--ink-2); font-size: 13px; line-height: 1.45; }
+</style>
+<main>
+  <h1>Tower card — five in-context ideas</h1>
+  <p class="sub">
+    The full board page is identical in every variant (real Hangar tokens, fictional
+    “copperline” data mirroring the live page’s states); only the tower card between the
+    project header and the flights list changes. Each page also shows the same card in its
+    behind-origin warning state at the bottom. Flip variants with the floating pill nav.
+  </p>
+  <ol>
+    <li><a href="01-identity.html">
+      <span class="n">01</span><span class="name">Identity</span>
+      <span class="desc">“Tower” becomes a nameplate — title, “main worktree — where merged work lands”, branch — with the familiar labeled cells kept to the right.</span>
+    </a></li>
+    <li><a href="02-row-zero.html">
+      <span class="n">02</span><span class="name">Row zero</span>
+      <span class="desc">The tower sits on the flights table’s own column grid — env under Env, reported under Reported — while keeping its panel chrome.</span>
+    </a></li>
+    <li><a href="03-sentence.html">
+      <span class="n">03</span><span class="name">Sentence</span>
+      <span class="desc">Leads with the tower’s condition as a sentence — “Up to date with origin — merged work is running at :3000.” — facts in one quiet line; the card tints amber when behind.</span>
+    </a></li>
+    <li><a href="04-clusters.html">
+      <span class="n">04</span><span class="name">Clusters</span>
+      <span class="desc">Facts grouped under Checkout / Environment / Release labels with hairline dividers, so the card has internal logic instead of six flat cells.</span>
+    </a></li>
+    <li><a href="05-env-forward.html">
+      <span class="n">05</span><span class="name">Env-forward</span>
+      <span class="desc">The right end is a bordered “:3000 open dev server” button — one obvious click to the merged app; the pull-to-update warning lands right beside it.</span>
+    </a></li>
+  </ol>
+</main>

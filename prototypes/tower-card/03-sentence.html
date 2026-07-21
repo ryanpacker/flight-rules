@@ -1,0 +1,455 @@
+<!--
+  BASE REPLICA of the live board page (src/routes/p.$name.tsx), built on the
+  real Hangar tokens from src/styles.css. Variants copy this file and replace
+  ONLY the marked TOWER regions (plus the #tower-css style block). Everything
+  outside the markers must stay byte-identical so the variants are judged
+  against the same page.
+
+  Data is fictional ("copperline") because prototypes/ is committed to a
+  public repo -- states mirror the real page: tower healthy and up to date,
+  two flights listening (one merged PR, one open), fresh reports.
+-->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flight Rules — copperline</title>
+<style>
+  /* Hangar tokens, verbatim from src/styles.css */
+  :root {
+    --paper: #faf8f4;
+    --ink: #23201b;
+    --hairline: #e8e2d8;
+    --accent: #15616a;
+    --good: #37804c;
+    --warn: #a9741a;
+    --crit: #b23b32;
+    --ink-2: color-mix(in srgb, #23201b 64%, #faf8f4);
+    --ink-3: color-mix(in srgb, #23201b 45%, #faf8f4);
+    --panel: color-mix(in srgb, #23201b 3.5%, #faf8f4);
+    --warn-bg: color-mix(in srgb, #a9741a 9%, #faf8f4);
+    --warn-line: color-mix(in srgb, #a9741a 30%, #faf8f4);
+    --warn-ink: color-mix(in srgb, #a9741a 80%, #23201b);
+    --good-bg: color-mix(in srgb, #37804c 10%, #faf8f4);
+    --chip: color-mix(in srgb, #23201b 7%, #faf8f4);
+    --row-hover: color-mix(in srgb, #15616a 4%, #faf8f4);
+    --display: Charter, "Iowan Old Style", Palatino, Georgia, serif;
+    --sans: system-ui, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { background: var(--paper); }
+  body {
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.45;
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent); text-decoration: none; border-radius: 2px; }
+  a:hover { text-decoration: underline; text-underline-offset: 2px; }
+  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; text-decoration: none; }
+  .mono { font-family: var(--mono); font-size: 0.93em; }
+  .microlabel {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .wrap { max-width: 1360px; margin: 0 auto; padding: 0 32px 72px; }
+
+  /* masthead */
+  header.mast {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 18px 0 14px;
+    border-bottom: 1px solid var(--hairline);
+  }
+  header.mast .brand {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  header.mast .tally { font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+
+  p.back { margin-top: 22px; font-size: 12.5px; }
+  p.back a { color: var(--accent); }
+
+  /* project header */
+  .project-head {
+    margin-top: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 16px;
+  }
+  .project-head h1 {
+    font-family: var(--display);
+    font-size: 30px;
+    line-height: 1.15;
+    font-weight: 400;
+    letter-spacing: -0.005em;
+  }
+  .project-head .repo { font-family: var(--mono); font-size: 12.5px; }
+  .project-head .sum {
+    margin-left: auto;
+    font-size: 13px;
+    color: var(--ink-2);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* flights */
+  section.flights { margin-top: 28px; }
+  section.flights h2 { font-size: 13px; font-weight: 650; letter-spacing: 0.02em; margin-bottom: 8px; }
+  .flight-grid {
+    display: grid;
+    grid-template-columns: 24px minmax(150px, 250px) minmax(150px, 1fr) minmax(150px, 230px) minmax(180px, 0.9fr) 110px;
+    column-gap: 20px;
+    align-items: center;
+  }
+  .flight-head {
+    border-bottom: 1px solid var(--hairline);
+    padding: 0 16px 8px;
+  }
+  .flight-head > span {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  article.flight {
+    min-height: 56px;
+    border-bottom: 1px solid var(--hairline);
+    border-left: 3px solid transparent;
+    padding: 11px 16px 11px 13px;
+  }
+  article.flight:hover { background: var(--row-hover); }
+  .dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--good);
+  }
+  .slug { font-size: 13.5px; font-weight: 600; letter-spacing: -0.005em; }
+  .cell-branch a { font-family: var(--mono); font-size: 12.5px; display: block; width: fit-content; }
+  .cell-branch .pos {
+    margin-top: 2px;
+    font-size: 12px;
+    color: var(--ink-2);
+    font-variant-numeric: tabular-nums;
+    text-decoration: underline dotted var(--ink-3);
+    text-underline-offset: 3px;
+    width: fit-content;
+  }
+  .cell-branch .pos .clean { font-size: 11.5px; color: var(--ink-3); }
+  .cell-env { font-size: 12.5px; }
+  .cell-env a { font-family: var(--mono); }
+  .cell-env .sep { margin: 0 6px; color: var(--ink-3); }
+  .cell-env .proc { display: block; margin-top: 2px; font-size: 11.5px; color: var(--ink-3); }
+  .cell-pr { font-size: 12.5px; min-width: 0; }
+  .cell-pr a { font-family: var(--mono); }
+  .prstate {
+    margin-left: 6px;
+    display: inline-block;
+    border-radius: 3px;
+    padding: 0 5px;
+    vertical-align: 1px;
+    font-size: 10.5px;
+    font-weight: 650;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .prstate.open { color: var(--good); background: var(--good-bg); }
+  .prstate.merged { color: var(--ink-2); background: var(--chip); }
+  .cell-pr .title {
+    display: block;
+    margin-top: 1px;
+    font-size: 12px;
+    color: var(--ink-2);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .cell-rep { text-align: right; font-size: 12.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  /* lower grid */
+  .lower-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    gap: 48px;
+    margin-top: 40px;
+    border-top: 1px solid var(--hairline);
+    padding-top: 24px;
+  }
+  .lower-grid h2 { margin-bottom: 12px; }
+  .lower-grid h2 .count { margin-left: 6px; font-weight: 400; font-variant-numeric: tabular-nums; }
+  ul.loose { list-style: none; }
+  ul.loose li {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--hairline);
+    font-size: 13px;
+  }
+  ul.loose li:first-child { border-top: 1px solid var(--hairline); }
+  ul.loose .ldot { position: relative; top: -1px; width: 6px; height: 6px; flex: none; border-radius: 50%; background: var(--warn); }
+  ul.loose .txt { min-width: 0; flex: 1; }
+  ul.loose .src { flex: none; font-size: 11.5px; white-space: nowrap; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+  ul.feed { list-style: none; }
+  ul.feed li {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--hairline);
+    font-size: 13px;
+  }
+  ul.feed li:first-child { border-top: 1px solid var(--hairline); }
+  ul.feed .kind {
+    width: 78px;
+    flex: none;
+    font-size: 10.5px;
+    font-weight: 650;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+  }
+  ul.feed .kind.takeoff { color: var(--accent); }
+  ul.feed .kind.landing { color: var(--good); }
+  ul.feed .kind.scrub { color: var(--ink-3); }
+  ul.feed .body { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-2); }
+  ul.feed .body b { font-weight: 600; color: var(--ink); }
+  ul.feed .age { width: 34px; flex: none; text-align: right; font-size: 11.5px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+
+  /* annex: warning-state exhibit */
+  .annex { margin-top: 64px; border-top: 1px dashed var(--warn-line); padding-top: 18px; }
+  .annex > p { margin-bottom: 14px; }
+</style>
+<!-- TOWER-CSS:START — variants may fully replace this style block -->
+<style id="tower-css">
+  /* Variant 03 — status sentence: one human headline, everything else quiet */
+  .tower-sent {
+    margin-top: 20px;
+    display: flex;
+    align-items: flex-start;
+    gap: 24px;
+    border: 1px solid var(--hairline);
+    background: var(--panel);
+    border-radius: 6px;
+    padding: 13px 20px 14px;
+  }
+  .tower-sent .main { min-width: 0; flex: 1; }
+  .tower-sent .eyebrow {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .tower-sent .eyebrow a { font-family: var(--mono); font-size: 12.5px; }
+  .tower-sent .headline {
+    margin-top: 5px;
+    font-size: 15px;
+    line-height: 1.4;
+    font-weight: 550;
+    letter-spacing: -0.005em;
+  }
+  .tower-sent .headline .sdot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--good);
+    margin-right: 9px;
+    position: relative;
+    top: -1px;
+  }
+  .tower-sent .headline a { font-family: var(--mono); font-size: 0.93em; }
+  .tower-sent .headline .refb { font-family: var(--mono); font-size: 0.93em; font-weight: 550; }
+  .tower-sent .facts {
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--ink-2);
+    font-variant-numeric: tabular-nums;
+  }
+  .tower-sent .facts a { font-family: var(--mono); }
+  .tower-sent .facts .warnv { font-weight: 600; color: var(--warn); }
+  .tower-sent .facts .quiet { color: var(--ink-3); }
+  .tower-sent .facts .monov { font-family: var(--mono); font-size: 0.96em; }
+  .tower-sent .rep {
+    margin-left: auto;
+    padding-top: 22px;
+    font-size: 12px;
+    color: var(--ink-2);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  .tower-sent .rep .fresh { color: var(--good); }
+  .tower-sent.is-warn {
+    background: var(--warn-bg);
+    border-color: var(--warn-line);
+  }
+  .tower-sent.is-warn .headline .sdot { background: var(--warn); }
+</style>
+<!-- TOWER-CSS:END -->
+
+<div class="wrap">
+  <header class="mast">
+    <span class="brand">Flight Rules</span>
+    <span class="tally">1 project · 2 flights · 2 listening · 1 open PR</span>
+  </header>
+
+  <p class="back"><a href="#">← All projects</a></p>
+
+  <div class="project-head">
+    <h1>copperline</h1>
+    <a class="repo" href="#">acme-tools/copperline</a>
+    <p class="sum">2 flights · 2 listening · 1 PR</p>
+  </div>
+
+<!-- TOWER:START — variants replace everything between these markers -->
+  <section class="tower-sent" aria-label="Tower status">
+    <div class="main">
+      <p class="eyebrow">
+        <span class="microlabel">Tower · main worktree</span>
+        <a href="#" class="mono">dev</a>
+      </p>
+      <p class="headline"><span class="sdot"></span>Up to date with origin — merged work is running at <a href="#">:3000</a>.</p>
+      <p class="facts"><span class="warnv">2 dirty files</span> · 0 unpushed · <a href="#">brisk-otter-512</a> · node · dev <span class="monov">v0.28.2</span></p>
+    </div>
+    <span class="rep"><span class="fresh">● </span>reported 8m ago</span>
+  </section>
+<!-- TOWER:END -->
+
+  <section class="flights">
+    <h2>Flights</h2>
+    <div class="flight-grid flight-head" aria-hidden="true">
+      <span></span>
+      <span>Flight</span>
+      <span>Branch · Position</span>
+      <span>Env</span>
+      <span>PR</span>
+      <span style="text-align:right">Reported</span>
+    </div>
+
+    <article class="flight flight-grid">
+      <span class="dot" title="Listening on its port"></span>
+      <span class="slug">pipeline-watcher</span>
+      <span class="cell-branch">
+        <a href="#">sweep-pipeline-watcher</a>
+        <span class="pos">↑8 ↓22 · <span class="clean">clean</span></span>
+      </span>
+      <span class="cell-env">
+        <a href="#">:3102</a><span class="sep">·</span><a href="#">quiet-heron-31</a>
+        <span class="proc">node</span>
+      </span>
+      <span class="cell-pr">
+        <a href="#">#29</a><span class="prstate merged">merged</span>
+        <span class="title">pipeline: phase 3 watcher + live gate (…</span>
+      </span>
+      <span class="cell-rep">8m ago</span>
+    </article>
+
+    <article class="flight flight-grid">
+      <span class="dot" title="Listening on its port"></span>
+      <span class="slug">workforce-model</span>
+      <span class="cell-branch">
+        <a href="#">workforce-model</a>
+        <span class="pos">↑41 ↓36 · <span class="clean">clean</span></span>
+      </span>
+      <span class="cell-env">
+        <a href="#">:3103</a><span class="sep">·</span><a href="#">calm-otter-85</a>
+        <span class="proc">node</span>
+      </span>
+      <span class="cell-pr">
+        <a href="#">#25</a><span class="prstate open">open</span>
+        <span class="title">Workforce planning 14.2 — baseline bootst…</span>
+      </span>
+      <span class="cell-rep">8m ago</span>
+    </article>
+  </section>
+
+  <div class="lower-grid">
+    <section aria-label="Loose ends">
+      <h2 class="microlabel">Loose ends<span class="count">2</span></h2>
+      <ul class="loose">
+        <li>
+          <span class="ldot"></span>
+          <span class="txt">Cookie bloat on localhost flight ports (431s when accumulated auth cookies exceed the Node 16KB header cap). Interim: clear localhost cookies when it recurs.</span>
+          <span class="src">atc · 29h</span>
+        </li>
+        <li>
+          <span class="ldot"></span>
+          <span class="txt">Legacy watcher parent processes still resident for two landed flights — kill each pair when its flight lands. Self-extinguishing under the new driver.</span>
+          <span class="src">ATC · 22h</span>
+        </li>
+      </ul>
+    </section>
+
+    <section aria-label="Activity">
+      <h2 class="microlabel">Activity</h2>
+      <ul class="feed">
+        <li><span class="kind">PR opened</span><span class="body"><a href="#">#35</a> — bugs: option-swap the user-menu bug item into a bug-list shortcut</span><span class="age">17m</span></li>
+        <li><span class="kind landing">Landing</span><span class="body"><b>fix-bug-4821</b> · <a href="#" class="mono">fix-bug-4821</a> · <a href="#">#31</a> merged</span><span class="age">47m</span></li>
+        <li><span class="kind scrub">Scrub</span><span class="body"><b>fix-bug-4712</b> · worktree removed</span><span class="age">2h</span></li>
+        <li><span class="kind">PR opened</span><span class="body"><a href="#">#34</a> — fix: align workforce-plans create-action labels with the nav label</span><span class="age">2h</span></li>
+        <li><span class="kind takeoff">Takeoff</span><span class="body"><b>fix-bug-4712</b> · <a href="#" class="mono">fix-bug-4712</a></span><span class="age">2h</span></li>
+        <li><span class="kind">PR opened</span><span class="body"><a href="#">#33</a> — fix: align workforce-plans landing page heading with sidebar nav</span><span class="age">2h</span></li>
+      </ul>
+    </section>
+  </div>
+
+  <div class="annex">
+    <p class="microlabel">Exhibit — the same tower card in its behind-origin (warning) state</p>
+<!-- TOWER-WARN:START — variants replace everything between these markers -->
+    <section class="tower-sent is-warn" aria-label="Tower status (warning state)">
+      <div class="main">
+        <p class="eyebrow">
+          <span class="microlabel">Tower · main worktree</span>
+          <a href="#" class="mono">dev</a>
+        </p>
+        <p class="headline"><span class="sdot"></span>3 commits behind <span class="refb">origin/dev</span> — pull to review merged work.</p>
+        <p class="facts"><span class="quiet">clean</span> · 0 unpushed · <a href="#">brisk-otter-512</a> · node · dev <span class="monov">v0.28.2</span></p>
+      </div>
+      <span class="rep"><span class="fresh">● </span>reported 8m ago</span>
+    </section>
+<!-- TOWER-WARN:END -->
+  </div>
+</div>
+
+<!-- Variant Navigation -->
+<nav class="variant-nav" aria-label="Design variants">
+  <a href="01-identity.html">1</a>
+  <a href="02-row-zero.html">2</a>
+  <a href="03-sentence.html" class="active" aria-current="page">3</a>
+  <a href="04-clusters.html">4</a>
+  <a href="05-env-forward.html">5</a>
+</nav>
+<style>
+  .variant-nav { position: fixed; bottom: 24px; right: 24px; display: flex; gap: 4px;
+    padding: 6px; background: rgba(20,20,20,0.55);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border-radius: 20px; border: 1px solid rgba(255,255,255,0.15);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.1),
+      inset 0 0.5px 0 rgba(255,255,255,0.2);
+    z-index: 2147483647;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    transition: opacity 0.3s ease; }
+  .variant-nav:hover { background: rgba(20,20,20,0.7); }
+  .variant-nav a { display: flex; align-items: center; justify-content: center;
+    width: 36px; height: 36px; border-radius: 12px; text-decoration: none;
+    font-size: 14px; font-weight: 500; letter-spacing: -0.01em;
+    color: rgba(255,255,255,0.7); text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+    transition: all 0.2s cubic-bezier(0.4,0,0.2,1);
+    background: transparent; border: 1px solid transparent; }
+  .variant-nav a:hover { background: rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.95); border-color: rgba(255,255,255,0.08); }
+  .variant-nav a.active { background: rgba(255,255,255,0.2); color: #fff;
+    font-weight: 600; border-color: rgba(255,255,255,0.15);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15),
+      inset 0 0.5px 0 rgba(255,255,255,0.25); }
+</style>
