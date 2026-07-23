@@ -400,6 +400,46 @@ echo "https://github.com/example/repo/pull/99"
     ]);
   });
 
+  it("registry: down run from inside the worktree still records via the hub's copy (self-deletion fallback)", () => {
+    // Commit the driver, config, hooks, and fake registry scripts so
+    // worktrees carry their own copies — the setup that bit the first
+    // consumer: teardown from inside the worktree runs the worktree's own
+    // driver, and worktree removal deletes its sibling flight.mjs before
+    // the registry close fires.
+    git(repo, "add", "-A");
+    git(repo, "commit", "-m", "driver files");
+    git(repo, "push", "origin", "HEAD:dev");
+
+    run(["up", "zeta", "--empty"]);
+    const wt = path.join(wtRoot, "zeta");
+    expect(fs.existsSync(path.join(wt, "scripts", "flight.mjs"))).toBe(true);
+
+    fs.rmSync(regLog, { force: true });
+    execFileSync("bash", [path.join(wt, "scripts", "wt.sh"), "down", "zeta"], {
+      cwd: wt,
+      env: {
+        ...process.env,
+        PATH: `${binDir}:${process.env.PATH}`,
+        FR_NONINTERACTIVE: "1",
+        HOOKLOG: hookLog,
+        GHLOG: ghLog,
+        REGLOG: regLog,
+      },
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+
+    // The worktree's copy is gone; the divert and report must have run via
+    // the hub checkout's scripts instead of silently no-oping.
+    const mainCwd = fs.realpathSync(repo);
+    expect(fs.existsSync(wt)).toBe(false);
+    expect(regLines()).toEqual([
+      `flight divert zeta --reason worktree removed cwd=${mainCwd}`,
+      "report",
+    ]);
+    git(repo, "branch", "-D", "zeta");
+  });
+
   it("race: concurrent ups claim distinct slots", { timeout: 60_000 }, async () => {
     const slugs = ["r-one", "r-two", "r-three", "r-four", "r-five", "r-six"];
     const results = await Promise.all(slugs.map((s) => runAsync(["up", s, "--empty"])));

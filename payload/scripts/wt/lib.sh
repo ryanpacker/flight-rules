@@ -32,6 +32,11 @@ fr_init() {
   # add/remove and is where post-remove runs.
   FR_MAIN_PATH=$(git -C "$FR_ROOT" worktree list --porcelain | awk '/^worktree /{print $2; exit}')
   [[ -n $FR_MAIN_PATH ]] || fr_die "could not resolve the main checkout"
+  # Repo-relative location of the driver scripts (e.g. "scripts/"), resolved
+  # now while the invoked copy still exists: a worktree's own copy can be
+  # deleted mid-teardown, and the registry fallback rebuilds the path under
+  # the main checkout from this.
+  FR_SELF_REL=$(git -C "$FR_SELF_DIR" rev-parse --show-prefix)
   FR_BASE_BRANCH=$(fr_cfg baseBranch dev)
   FR_PORT_BASE=$(fr_cfg portBase 3100)
   FR_MAX_SLOTS=$(fr_cfg maxSlots 10)
@@ -162,7 +167,14 @@ fr_hook() { # name slot [cwd]
 # ---------------------------------------------------------------------------
 
 fr_registry() { # <script.mjs> [args...]
-  local script="$FR_SELF_DIR/$1"; shift
+  local name=$1; shift
+  local script="$FR_SELF_DIR/$name"
+  # The invoked copy can vanish mid-teardown: down run from inside a worktree
+  # executes that worktree's own driver, and worktree removal deletes its
+  # sibling scripts before the registry call fires. Fall back to the main
+  # checkout's copy at the same repo-relative path; only when neither copy
+  # exists (registry genuinely not installed) is this a no-op.
+  [[ -f $script ]] || script="$FR_MAIN_PATH/$FR_SELF_REL$name"
   [[ -f $script ]] || return 0
   command -v node >/dev/null 2>&1 || return 0
   (cd "$FR_MAIN_PATH" && node "$script" "$@") \
