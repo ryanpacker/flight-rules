@@ -8,10 +8,13 @@ import {
   Masthead,
   SilentBadge,
   StaleBadge,
+  LOW_FUEL_MS,
+  OPEN_STATUSES,
   branchUrl,
   commitUrl,
   deploymentUrl,
   formatAge,
+  formatFuel,
   hasSecret,
   joinFrags,
   microlabel,
@@ -40,7 +43,7 @@ export const Route = createFileRoute("/p/$name")({
 
 function boardKey(data: ProjectData) {
   return data.flights
-    .filter((f) => f.status === "airborne")
+    .filter((f) => OPEN_STATUSES.includes(f.status))
     .map((f) => f._id)
     .sort()
     .join();
@@ -94,6 +97,8 @@ function Board({ data, now }: { data: ProjectData; now: number }) {
     down,
     stale,
     noReport,
+    holding,
+    diverted,
     freshest,
     openPrs,
     draftPrs,
@@ -108,6 +113,9 @@ function Board({ data, now }: { data: ProjectData; now: number }) {
   if (listening > 0)
     summaryFrags.push(<span key="l">{listening} listening</span>);
   if (down > 0) summaryFrags.push(<span key="d">{down} down</span>);
+  if (holding > 0) summaryFrags.push(<span key="h">{holding} holding</span>);
+  if (diverted > 0)
+    summaryFrags.push(<span key="v">{diverted} diverted</span>);
   if (dormant) {
     summaryFrags.push(
       <span key="q" className="font-semibold text-warn">
@@ -194,7 +202,7 @@ function Board({ data, now }: { data: ProjectData; now: number }) {
 
         {flights.length === 0 ? (
           <p className="py-2.5 text-[13px] text-ink-3 italic">
-            No flights airborne.
+            No flights open.
           </p>
         ) : (
           flights.map((f) => (
@@ -203,6 +211,7 @@ function Board({ data, now }: { data: ProjectData; now: number }) {
               project={project}
               flight={f}
               prs={data.prs}
+              tower={tower}
               now={now}
             />
           ))
@@ -471,54 +480,76 @@ function FlightRow({
   project,
   flight,
   prs,
+  tower,
   now,
 }: {
   project: Project;
   flight: Flight;
   prs: Array<Pr>;
+  tower: ProjectData["tower"];
   now: number;
 }) {
   const report = flight.report;
+  const diverted = flight.status === "diverted";
+  const holding = flight.status === "holding";
   const tier = reportTier(report?.reportedAt, now);
   const pr =
+    (flight.clearancePr !== undefined
+      ? prs.find((p) => p.number === flight.clearancePr)
+      : undefined) ??
     prs.find((p) => p.number === report?.prNumber) ??
     prs.find((p) => p.headRef === flight.branch);
 
-  const rowTone =
-    tier === "stale"
+  const fuelLeft =
+    holding && flight.fuelDeadline !== undefined
+      ? flight.fuelDeadline - now
+      : undefined;
+
+  // A diverted flight's env is down by design: mute the row, skip the
+  // liveness/staleness treatments that assume something should be up.
+  const rowTone = diverted
+    ? "border-l-hairline bg-silent-tint hover:bg-silent-tint-hover"
+    : tier === "stale"
       ? "border-l-warn bg-warn-tint hover:bg-warn-tint-hover"
       : tier === "never"
         ? "border-l-hairline bg-silent-tint hover:bg-silent-tint-hover"
         : "border-l-transparent hover:bg-row-hover";
-  const silentMuted = tier === "never" ? "text-ink-3" : "";
+  const silentMuted = diverted || tier === "never" ? "text-ink-3" : "";
 
-  const status = !report
+  const status = diverted
     ? {
         cls: "text-ink-3 font-[550]",
         dot: "none" as const,
-        label: "NO REPORT",
-        title: "No report received yet",
+        label: "DIVERTED",
+        title: "Diverted — env down, branch kept; take off again to un-park",
       }
-    : report.listening === true
+    : !report
       ? {
-          cls: "text-good font-[650]",
-          dot: "good" as const,
-          label: "LISTENING",
-          title: "Listening on its port",
+          cls: "text-ink-3 font-[550]",
+          dot: "none" as const,
+          label: "NO REPORT",
+          title: "No report received yet",
         }
-      : report.listening === false
+      : report.listening === true
         ? {
-            cls: "text-crit font-[650]",
-            dot: "crit" as const,
-            label: "NOT LISTENING",
-            title: "Not listening — nothing answering on its port",
+            cls: "text-good font-[650]",
+            dot: "good" as const,
+            label: "LISTENING",
+            title: "Listening on its port",
           }
-        : {
-            cls: "text-ink-3 font-[550]",
-            dot: "none" as const,
-            label: "NO PORT",
-            title: "Reporting, but no port assigned",
-          };
+        : report.listening === false
+          ? {
+              cls: "text-crit font-[650]",
+              dot: "crit" as const,
+              label: "NOT LISTENING",
+              title: "Not listening — nothing answering on its port",
+            }
+          : {
+              cls: "text-ink-3 font-[550]",
+              dot: "none" as const,
+              label: "NO PORT",
+              title: "Reporting, but no port assigned",
+            };
 
   const aliveProcs = report
     ? Object.entries(report.processes)
@@ -546,6 +577,23 @@ function FlightRow({
         title={flight.slug}
       >
         <span className="line-clamp-2 break-all">{flight.slug}</span>
+        {holding && (
+          <span
+            className={`mt-0.5 block text-[11px] font-[550] tracking-[0.04em] tabular-nums ${
+              fuelLeft !== undefined && fuelLeft < LOW_FUEL_MS
+                ? "text-warn"
+                : "text-ink-3"
+            }`}
+          >
+            holding
+            {fuelLeft !== undefined && <> · {formatFuel(fuelLeft)}</>}
+          </span>
+        )}
+        {diverted && (
+          <span className="mt-0.5 block text-[11px] font-[550] tracking-[0.04em] text-ink-3">
+            diverted{flight.divertReason && <> · {flight.divertReason}</>}
+          </span>
+        )}
       </span>
 
       <PositionCell
@@ -557,29 +605,37 @@ function FlightRow({
       />
 
       <span className={`min-w-0 text-[12.5px] ${silentMuted}`}>
-        <span className="block truncate">
-          {flight.port !== undefined && (
-            <ExtLink href={portUrl(project, flight.port)} className={mono}>
-              :{flight.port}
-            </ExtLink>
-          )}
-          {flight.port !== undefined && flight.deploymentName && (
-            <span className="mx-1.5 text-ink-3">·</span>
-          )}
-          {flight.deploymentName && (
-            <ExtLink
-              href={deploymentUrl(project, flight.deploymentName)}
-              className={mono}
-              title={flight.deploymentName}
-            >
-              {flight.deploymentName}
-            </ExtLink>
-          )}
-        </span>
-        {aliveProcs.length > 0 && (
-          <span className="mt-0.5 block truncate text-[11.5px] text-ink-3">
-            {aliveProcs.join(" · ")}
+        {diverted ? (
+          <span className="block truncate text-xs text-ink-3 italic">
+            env down — up to un-park
           </span>
+        ) : (
+          <>
+            <span className="block truncate">
+              {flight.port !== undefined && (
+                <ExtLink href={portUrl(project, flight.port)} className={mono}>
+                  :{flight.port}
+                </ExtLink>
+              )}
+              {flight.port !== undefined && flight.deploymentName && (
+                <span className="mx-1.5 text-ink-3">·</span>
+              )}
+              {flight.deploymentName && (
+                <ExtLink
+                  href={deploymentUrl(project, flight.deploymentName)}
+                  className={mono}
+                  title={flight.deploymentName}
+                >
+                  {flight.deploymentName}
+                </ExtLink>
+              )}
+            </span>
+            {aliveProcs.length > 0 && (
+              <span className="mt-0.5 block truncate text-[11.5px] text-ink-3">
+                {aliveProcs.join(" · ")}
+              </span>
+            )}
+          </>
         )}
       </span>
 
@@ -589,18 +645,32 @@ function FlightRow({
             <ExtLink href={prUrl(project, pr.number)} className={mono}>
               #{pr.number}
             </ExtLink>
-            <PrState pr={pr} />
+            {holding ? (
+              <HoldChips pr={pr} prs={prs} tower={tower} />
+            ) : (
+              <PrState pr={pr} />
+            )}
             <span className="mt-px block truncate text-xs text-ink-2">
               {pr.title}
             </span>
           </>
+        ) : holding ? (
+          <HoldChips pr={undefined} prs={prs} tower={tower} />
         ) : (
           <span className="text-xs text-ink-3">no PR</span>
         )}
       </span>
 
       <span className="text-right text-[12.5px] whitespace-nowrap text-ink-2 tabular-nums">
-        {!report ? (
+        {diverted ? (
+          <span className="text-ink-3">
+            {flight.divertedAt !== undefined ? (
+              <>diverted {formatAge(now - flight.divertedAt)} ago</>
+            ) : (
+              "diverted"
+            )}
+          </span>
+        ) : !report ? (
           <>
             <span className="text-ink-3 italic">never</span>
             <BadgeSlot>
@@ -909,13 +979,83 @@ function PrState({ pr }: { pr: Pr }) {
   );
 }
 
+// Hold labels: derived at render time from synced PR + tower state, never
+// stored. Two independent axes; flight-readiness takes display priority, the
+// destination label demotes to a muted suffix when both apply.
+type HoldLabel = { label: string; cls: string };
+
+function flightReadiness(pr: Pr | undefined): HoldLabel | undefined {
+  if (!pr) return undefined;
+  if (pr.reviewDecision === "CHANGES_REQUESTED" || pr.checksState === "failing")
+    return { label: "go-around required", cls: "text-warn bg-warn-bg" };
+  if (pr.reviewDecision === "APPROVED" && pr.checksState !== "pending")
+    return { label: "cleared to land", cls: "text-good bg-good-bg" };
+  return { label: "waiting for clearance", cls: "text-ink-2 bg-chip" };
+}
+
+function destinationReadiness(
+  pr: Pr | undefined,
+  prs: Array<Pr>,
+  tower: ProjectData["tower"],
+): HoldLabel | undefined {
+  if (tower && tower.dirtyCount > 0)
+    return { label: "runway blocked", cls: "text-warn bg-warn-bg" };
+  if (!pr) return undefined;
+  const ahead = prs.filter(
+    (p) =>
+      p.state === "OPEN" &&
+      !p.isDraft &&
+      p.number !== pr.number &&
+      (p.createdAt ?? 0) < (pr.createdAt ?? 0),
+  ).length;
+  if (ahead === 0) return undefined;
+  return {
+    label: `number ${ahead + 1} for landing`,
+    cls: "text-ink-2 bg-chip",
+  };
+}
+
+function HoldChips({
+  pr,
+  prs,
+  tower,
+}: {
+  pr: Pr | undefined;
+  prs: Array<Pr>;
+  tower: ProjectData["tower"];
+}) {
+  const readiness = flightReadiness(pr);
+  const destination = destinationReadiness(pr, prs, tower);
+  const primary = readiness ?? destination;
+  if (!primary) return null;
+  const secondary = readiness ? destination : undefined;
+  return (
+    <>
+      <span
+        className={`ml-1.5 inline-block rounded-[3px] px-[5px] align-[1px] text-[10.5px] font-[650] tracking-[0.06em] uppercase ${primary.cls}`}
+      >
+        {primary.label}
+      </span>
+      {secondary && (
+        <span className="ml-1.5 text-[11px] whitespace-nowrap text-ink-3">
+          {secondary.label}
+        </span>
+      )}
+    </>
+  );
+}
+
 // --- activity -----------------------------------------------------------------
 
 const EVENT_META: Record<string, { label: string; cls: string }> = {
   takeoff: { label: "Takeoff", cls: "text-accent" },
+  hold: { label: "Hold", cls: "text-accent" },
+  resume: { label: "Resume", cls: "text-accent" },
+  divert: { label: "Divert", cls: "text-warn" },
   landing: { label: "Landing", cls: "text-good" },
   scrub: { label: "Scrub", cls: "text-ink-3" },
   "pr-opened": { label: "PR opened", cls: "text-ink-2" },
+  "pr-merged": { label: "PR merged", cls: "text-good" },
   release: { label: "Release", cls: "text-warn" },
 };
 
@@ -939,6 +1079,7 @@ function EventText({
 
   switch (kind) {
     case "scrub":
+    case "divert":
       return (
         <>
           {slug && <b className="font-semibold text-ink">{slug}</b>}
@@ -952,6 +1093,8 @@ function EventText({
         </>
       );
     case "takeoff":
+    case "hold":
+    case "resume":
     case "landing":
       return (
         <>
@@ -972,6 +1115,7 @@ function EventText({
         </>
       );
     case "pr-opened":
+    case "pr-merged":
       return (
         <>
           {number && (

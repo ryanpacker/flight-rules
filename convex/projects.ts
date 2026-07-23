@@ -11,6 +11,7 @@ const projectFields = {
   githubRepo: v.string(),
   integrationBranch: v.string(),
   prodUrl: v.optional(v.string()),
+  fuelHours: v.optional(v.number()),
   templates: v.object({
     port: v.string(),
     deployment: v.string(),

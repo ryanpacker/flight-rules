@@ -13,6 +13,7 @@ import type * as flights from "../flights.js";
 import type * as http from "../http.js";
 import type * as lib_secret from "../lib/secret.js";
 import type * as looseEnds from "../looseEnds.js";
+import type * as migrations from "../migrations.js";
 import type * as projects from "../projects.js";
 import type * as report from "../report.js";
 
@@ -28,6 +29,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   "lib/secret": typeof lib_secret;
   looseEnds: typeof looseEnds;
+  migrations: typeof migrations;
   projects: typeof projects;
   report: typeof report;
 }>;

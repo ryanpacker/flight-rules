@@ -13,10 +13,12 @@
 # sibling payload scripts flight.mjs / report.mjs when they are installed
 # next to this file): takeoff is recorded the moment the worktree exists,
 # the backend deployment name is patched in when a hook reports one by
-# writing $FR_CLAIM_DIR/meta/deployment, land/scrub is recorded on
-# down/prune/reap (land if the branch's PR merged, scrub otherwise), and
-# the reporter runs after every lifecycle change. Registry failures warn
-# and never block environment work.
+# writing $FR_CLAIM_DIR/meta/deployment, and down/prune/reap record a
+# divert (a scrub when --delete-branch declares abandonment) -- teardown
+# never decides a flight's fate; land/scrub happen elsewhere (the PR
+# observer for held flights, or an explicit flight.mjs call). The reporter
+# runs after every lifecycle change. Registry failures warn and never
+# block environment work. Contract: docs/lifecycle-contract.md.
 # ============================================================================
 set -euo pipefail
 
@@ -181,7 +183,11 @@ cmd_down() {
   if ! fr_hook post-remove "$slot" "$FR_MAIN_PATH"; then
     fr_die "post-remove failed — claim retained for inspection"
   fi
-  fr_registry_close "$slot" "worktree removed"
+  if [[ $delete_branch -eq 1 ]]; then
+    fr_registry_scrub "$slot" "branch deleted"
+  else
+    fr_registry_divert "$slot" "worktree removed"
+  fi
   fr_claim_release "$slot"
   fr_registry_report
   [[ -n $pr_url ]] && fr_log "published: $pr_url"
@@ -203,7 +209,7 @@ cmd_prune() {
   if ! fr_hook post-remove "$slot" "$FR_MAIN_PATH"; then
     fr_die "post-remove failed — claim retained for inspection"
   fi
-  fr_registry_close "$slot" "claim pruned"
+  fr_registry_divert "$slot" "claim pruned"
   fr_claim_release "$slot"
   fr_registry_report
   fr_log "pruned — slot $slot released"
@@ -314,7 +320,11 @@ cmd_reap() {
   if ! fr_hook post-remove "$slot" "$FR_MAIN_PATH"; then
     fr_die "post-remove failed — claim retained for inspection"
   fi
-  fr_registry_close "$slot" "reaped"
+  if [[ $delete_branch -eq 1 ]]; then
+    fr_registry_scrub "$slot" "reaped, branch deleted"
+  else
+    fr_registry_divert "$slot" "reaped"
+  fi
   fr_claim_release "$slot"
   fr_registry_report
   fr_log "reaped — slot $slot released"

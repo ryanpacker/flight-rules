@@ -171,8 +171,30 @@ const ghOut = sh("gh", [
   "--limit",
   "50",
   "--json",
-  "number,title,headRefName,state,isDraft,updatedAt,createdAt,mergedAt,closedAt",
+  "number,title,headRefName,state,isDraft,updatedAt,createdAt,mergedAt,closedAt,reviewDecision,statusCheckRollup",
 ]);
+
+// Reduce GitHub's per-check rollup to one word the board can label from:
+// failing beats pending beats passing; no checks at all reports nothing.
+function reduceChecks(rollup) {
+  if (!Array.isArray(rollup) || rollup.length === 0) return undefined;
+  let pending = false;
+  for (const check of rollup) {
+    const outcome = check.conclusion || check.state;
+    if (
+      ["FAILURE", "ERROR", "TIMED_OUT", "CANCELLED", "ACTION_REQUIRED"].includes(
+        outcome,
+      )
+    ) {
+      return "failing";
+    }
+    if ((check.status && check.status !== "COMPLETED") || outcome === "PENDING") {
+      pending = true;
+    }
+  }
+  return pending ? "pending" : "passing";
+}
+
 if (ghOut) {
   const ts = (value) => (value ? Date.parse(value) : undefined);
   prs = JSON.parse(ghOut).map((pr) => ({
@@ -185,6 +207,8 @@ if (ghOut) {
     createdAt: ts(pr.createdAt),
     mergedAt: ts(pr.mergedAt),
     closedAt: ts(pr.closedAt),
+    reviewDecision: pr.reviewDecision || undefined,
+    checksState: reduceChecks(pr.statusCheckRollup),
   }));
 } else {
   console.warn("warning: `gh pr list` failed; reporting without PRs");

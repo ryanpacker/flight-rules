@@ -26,9 +26,17 @@ freshness explicitly. Staleness is a first-class, visible concept.
 - **ATC** -- the coordinator session that lives in the tower: releases, PR
   accounting, flight lifecycle, project questions. ATC does not do feature
   work; feature work belongs on a flight.
-- **takeoff** -- create a flight (worktree + env + registry row).
-- **land** -- a flight's work merges and the flight is torn down.
+- **takeoff** -- create a flight (worktree + env + registry row), or un-park
+  a diverted one (same row, second leg).
+- **hold** -- declare a PR as the flight's landing clearance: env stays up
+  for review, fuel (a TTL) starts. Only held flights auto-close from PR state.
+- **resume** -- come out of holding back to active work (more work to do).
+- **divert** -- park a flight: env down, branch kept, row stays on the board
+  as delayed. What teardown records; never a completion.
+- **land** -- a flight's clearance PR merges; the flight is done.
 - **scrub** -- abandon a flight without landing it.
+- **airborne** -- env up: enroute or holding. **open** -- on the board:
+  enroute, holding, or diverted.
 - **the board** -- the live dashboard: every flight, the tower, loose ends,
   and an activity feed.
 
@@ -70,6 +78,18 @@ freshness explicitly. Staleness is a first-class, visible concept.
    installer stamps `.flight-rules/VERSION` in consumers. `2.0.0` is cut when
    phase 2's exit bar is met (lifecycle hooks live in the first consumer,
    status command cut over).
+9. **Flight lifecycle decoupled from env lifecycle** (decided 2026-07-23,
+   shipped in 2.2.0). Five stored states -- `enroute` (renamed from
+   `airborne`), `holding`, `diverted`, `landed`, `scrubbed` -- per
+   `docs/proposals/flight-lifecycle-holding-diverting.md` as revised in
+   review: teardown records a divert (scrub only on `--delete-branch`), only
+   holding flights auto-close from PR state (multi-PR enroute flights are
+   first-class; merges there are just `pr-merged` events), takeoff un-parks a
+   diverted flight, `resume` means holding → enroute, and hold labels are
+   derived at render time along two axes (flight-readiness from PR sync,
+   destination-readiness from tower + PR queue). The registry never flips
+   state on a timer; a consumer-side reconciler downs envs whose flight is no
+   longer enroute | holding. Full interface: `docs/lifecycle-contract.md`.
 
 ## Schema (phase 1)
 
@@ -79,20 +99,24 @@ All tables project-scoped from day one; the first consumer is one row in
 - `projects` -- name, repoPath, worktreeRoot, githubRepo (`owner/name`),
   prodUrl, and URL templates for link derivation.
 - `flights` -- projectId, slug, worktreePath, branch, port, deploymentName,
-  status (`airborne` / `landed` / `scrubbed`), createdAt / closedAt, and a
-  `report` snapshot: reportedAt, listening (bool), processes
-  (name → alive/dead), dirtyCount, ahead/behind vs the integration branch,
-  last commits (sha + subject), prNumber.
+  status (`enroute` / `holding` / `diverted` / `landed` / `scrubbed`; the
+  active state was named `airborne` until 2.2.0), createdAt / closedAt,
+  holding fields (heldAt, fuelDeadline, clearancePr), divert fields
+  (divertedAt, divertReason), and a `report` snapshot: reportedAt, listening
+  (bool), processes (name → alive/dead), dirtyCount, ahead/behind vs the
+  integration branch, last commits (sha + subject), prNumber.
 - `towers` -- one row per project: branch, dirtyCount, unpushedCount, dev
   version, prod version, reportedAt; plus the tower's own dev environment
   (port, deploymentName, listening, processes -- observed the same way a
   flight's is, from `.env.local` in the main checkout) and behindUpstream
   (commits the checkout lags origin, i.e. merged-but-not-pulled work).
-- `prs` -- projectId, number, title, headRef, state, isDraft, updatedAt.
-  Joined to flights by branch.
+- `prs` -- projectId, number, title, headRef, state, isDraft, updatedAt,
+  reviewDecision, checksState. Joined to flights by clearance PR, then
+  reported PR, then branch.
 - `looseEnds` -- projectId, text, source attribution, createdAt, resolvedAt.
-- `events` -- projectId, append-only: kind (takeoff, landing, scrub,
-  pr-opened, release, ...), payload, at. Feeds the activity feed.
+- `events` -- projectId, append-only: kind (takeoff, hold, resume, divert,
+  landing, scrub, pr-opened, pr-merged, release, ...), payload, at. Feeds the
+  activity feed.
 
 **Link derivation rule:** store raw identifiers (port, deployment name, PR
 number, branch); derive URLs in the UI from the project row's templates

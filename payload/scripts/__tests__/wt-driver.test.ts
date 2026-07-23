@@ -342,7 +342,7 @@ echo "https://github.com/example/repo/pull/99"
     git(repo, "worktree", "prune");
   });
 
-  it("registry: takeoff on create, deployment patched in from meta/, land on merged PR, scrub otherwise", () => {
+  it("registry: takeoff on create, deployment patched in from meta/, divert on down, scrub only when the branch is deleted", () => {
     // Fake registry scripts next to the driver switch recording on — the
     // driver calls them best-effort; before this test they were absent and
     // every lifecycle ran fine without them.
@@ -371,10 +371,15 @@ echo "https://github.com/example/repo/pull/99"
       "report",
     ]);
 
-    // down with a merged PR: land --pr <n>, then report
+    // plain down: teardown never decides the flight's fate — it records a
+    // divert (env down, branch kept, row stays on the board), no gh query
     fs.rmSync(regLog, { force: true });
-    run(["down", "delta", "--delete-branch"], { env: { GH_MERGED: "42" } });
-    expect(regLines()).toEqual([`flight land delta --pr 42 cwd=${mainCwd}`, "report"]);
+    run(["down", "delta"]);
+    expect(regLines()).toEqual([
+      `flight divert delta --reason worktree removed cwd=${mainCwd}`,
+      "report",
+    ]);
+    git(repo, "branch", "-D", "delta"); // kept by default; cleanup for later tests
 
     // up without a deployment: single takeoff (no patch), report
     fs.rmSync(regLog, { force: true });
@@ -385,11 +390,12 @@ echo "https://github.com/example/repo/pull/99"
       "report",
     ]);
 
-    // down with no merged PR: scrub with the reason, then report
+    // down --delete-branch: deleting the branch is the caller declaring
+    // abandonment — the one teardown that records a scrub
     fs.rmSync(regLog, { force: true });
     run(["down", "epsilon", "--delete-branch"]);
     expect(regLines()).toEqual([
-      `flight scrub epsilon --reason worktree removed cwd=${mainCwd}`,
+      `flight scrub epsilon --reason branch deleted cwd=${mainCwd}`,
       "report",
     ]);
   });

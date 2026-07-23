@@ -1,9 +1,19 @@
 # Proposal: decouple flight lifecycle from environment lifecycle -- holding, diverting, landing
 
-Status: proposal, not yet scheduled. Captured 2026-07-20 from consumer
-feedback (the first consumer's bug auto-fix pipeline; Ryan). Extends the phase-1
-schema's flight statuses (`airborne` / `landed` / `scrubbed`) with two new
-stored states and inverts who decides a flight's fate.
+Status: **implemented as revised, 2.2.0 (2026-07-23).** The build followed
+this proposal with four review revisions: auto-land/auto-scrub apply to
+holding only (multi-PR enroute flights are first-class; merges there are
+`pr-merged` events), the verb set was reshaped (takeoff un-parks a diverted
+flight; `resume` means holding → enroute; no diverted → holding verb), the
+active state was renamed `airborne` → `enroute`, and hold labels are derived
+along two axes (flight-readiness, destination-readiness). The authoritative
+interface is `docs/lifecycle-contract.md`; the settled decision is recorded
+in `docs/plan.md`.
+
+Captured 2026-07-20 from consumer feedback (the first consumer's bug
+auto-fix pipeline; Ryan). Extends the phase-1 schema's flight statuses
+(`airborne` / `landed` / `scrubbed`) with two new stored states and inverts
+who decides a flight's fate.
 
 ## The use case
 

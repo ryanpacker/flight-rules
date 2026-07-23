@@ -86,19 +86,42 @@ export function formatAge(ms: number) {
   return `${Math.floor(h / 24)}d`;
 }
 
+// Fuel is forward-looking (deadline - now), and a tank running low needs
+// minute-level urgency that formatAge's hour coarsening would hide.
+export const LOW_FUEL_MS = 60 * 60_000;
+
+export function formatFuel(ms: number) {
+  if (ms <= 0) return "fuel out";
+  const m = Math.ceil(ms / 60_000);
+  if (m < 90) return `${m}m fuel`;
+  return `${Math.round(m / 60)}h fuel`;
+}
+
+// On-the-board states. "Airborne" is env-up (enroute | holding); diverted is
+// parked (env down, branch kept) but still the board's business.
+export const OPEN_STATUSES = ["enroute", "holding", "diverted"];
+
 // --- derived stats ----------------------------------------------------------
 
 export function projectStats(d: ProjectData, now: number) {
   // Stable sort: takeoff time ascending; attention is color, not position.
   const flights = d.flights
-    .filter((f) => f.status === "airborne")
+    .filter((f) => OPEN_STATUSES.includes(f.status))
     .sort((a, b) => a.createdAt - b.createdAt);
   let listening = 0;
   let down = 0;
   let stale = 0;
   let noReport = 0;
+  let holding = 0;
+  let diverted = 0;
   let freshest: number | undefined;
   for (const f of flights) {
+    if (f.status === "holding") holding++;
+    if (f.status === "diverted") {
+      // Env down by design: liveness and staleness accounting don't apply.
+      diverted++;
+      continue;
+    }
     const r = f.report;
     if (!r) {
       noReport++;
@@ -119,6 +142,8 @@ export function projectStats(d: ProjectData, now: number) {
     down,
     stale,
     noReport,
+    holding,
+    diverted,
     freshest,
     openPrs: openPrs.length,
     draftPrs,
@@ -325,8 +350,12 @@ export function Masthead({
         {flights} {flights === 1 ? "flight" : "flights"}
       </Frag>,
     ];
+    const holding = sum((s) => s.holding);
+    const diverted = sum((s) => s.diverted);
     if (listening > 0) frags.push(<Frag key="l">{listening} listening</Frag>);
     if (down > 0) frags.push(<Frag key="d">{down} down</Frag>);
+    if (holding > 0) frags.push(<Frag key="h">{holding} holding</Frag>);
+    if (diverted > 0) frags.push(<Frag key="v">{diverted} diverted</Frag>);
     if (stale > 0)
       frags.push(
         <Frag key="s" warn>

@@ -1,8 +1,13 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
+// Stored states change only when real infrastructure changes. "airborne" is
+// not a state: it means env-up (enroute | holding). "open" means on-the-board
+// (enroute | holding | diverted). Richer labels are derived at render time.
 export const flightStatus = v.union(
-  v.literal("airborne"),
+  v.literal("enroute"),
+  v.literal("holding"),
+  v.literal("diverted"),
   v.literal("landed"),
   v.literal("scrubbed"),
 );
@@ -28,6 +33,8 @@ export default defineSchema({
     githubRepo: v.string(), // "owner/name"
     integrationBranch: v.string(),
     prodUrl: v.optional(v.string()),
+    // Default holding TTL in hours (fuel); the hold mutation falls back to 8.
+    fuelHours: v.optional(v.number()),
     // Raw identifiers are stored on rows; URLs are derived from these
     // templates in the UI ({port} and {deployment} placeholders).
     templates: v.object({
@@ -46,6 +53,13 @@ export default defineSchema({
     status: flightStatus,
     createdAt: v.number(),
     closedAt: v.optional(v.number()),
+    // Holding: the explicit declaration "this PR is my landing clearance".
+    heldAt: v.optional(v.number()),
+    fuelDeadline: v.optional(v.number()),
+    clearancePr: v.optional(v.number()),
+    // Diverted: parked at the alternate -- env down, branch kept, row stays.
+    divertedAt: v.optional(v.number()),
+    divertReason: v.optional(v.string()),
     report: v.optional(flightReport),
   })
     .index("by_project", ["projectId"])
@@ -83,6 +97,11 @@ export default defineSchema({
     createdAt: v.optional(v.number()),
     mergedAt: v.optional(v.number()),
     closedAt: v.optional(v.number()),
+    // Review + CI state, synced so hold labels can be derived at render time
+    // (never stored): reviewDecision is GitHub's enum, checksState is the
+    // reporter's reduction of statusCheckRollup (passing|failing|pending).
+    reviewDecision: v.optional(v.string()),
+    checksState: v.optional(v.string()),
   })
     .index("by_project", ["projectId"])
     .index("by_project_number", ["projectId", "number"]),

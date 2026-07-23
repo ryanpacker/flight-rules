@@ -51,11 +51,64 @@ mutationRoute("/report", internal.report.ingest);
 // Seed / update a project row.
 mutationRoute("/projects", internal.projects.upsert);
 
-// Lifecycle hooks post here at the moment of truth (takeoff/land/scrub
-// scripts in consumer projects).
+// Lifecycle verbs post here at the moment of truth (the driver and consumer
+// pipelines, via flight.mjs). Contract: docs/lifecycle-contract.md.
 mutationRoute("/flights/takeoff", internal.flights.takeoff);
+mutationRoute("/flights/hold", internal.flights.hold);
+mutationRoute("/flights/resume", internal.flights.resume);
+mutationRoute("/flights/divert", internal.flights.divert);
 mutationRoute("/flights/land", internal.flights.land);
 mutationRoute("/flights/scrub", internal.flights.scrub);
+
+// Reconciler queries: the consumer-side loop downs any live env whose flight
+// is no longer enroute | holding. Errors and nulls mean "skip", so these
+// return data, never decisions.
+http.route({
+  path: "/flights/holding",
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    if (!authorized(request))
+      return new Response("Unauthorized", { status: 401 });
+    const project = new URL(request.url).searchParams.get("project");
+    if (!project) return new Response("Missing ?project=", { status: 400 });
+    try {
+      const rows = await ctx.runQuery(internal.flights.holdingList, {
+        projectName: project,
+      });
+      return Response.json(rows);
+    } catch (err) {
+      return new Response(err instanceof Error ? err.message : "Bad request", {
+        status: 400,
+      });
+    }
+  }),
+});
+
+http.route({
+  path: "/flights/status",
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    if (!authorized(request))
+      return new Response("Unauthorized", { status: 401 });
+    const url = new URL(request.url);
+    const project = url.searchParams.get("project");
+    const slug = url.searchParams.get("slug");
+    if (!project || !slug)
+      return new Response("Missing ?project= or ?slug=", { status: 400 });
+    try {
+      const row = await ctx.runQuery(internal.flights.statusBySlug, {
+        projectName: project,
+        slug,
+      });
+      // null strictly means "no flight ever existed for this slug".
+      return Response.json(row);
+    } catch (err) {
+      return new Response(err instanceof Error ? err.message : "Bad request", {
+        status: 400,
+      });
+    }
+  }),
+});
 
 // Reporter fetches its project config from here -- config lives in the
 // registry, never in the public repo.

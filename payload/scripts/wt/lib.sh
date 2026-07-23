@@ -181,17 +181,23 @@ fr_registry_takeoff() { # slot
     --worktree "$wt" --port "$port" ${extra[@]+"${extra[@]}"}
 }
 
-fr_registry_close() { # slot reason — land if the branch's PR merged, else scrub
-  local slot=$1 reason=$2 slug branch merged_pr
+# Teardown never decides a flight's fate: down/prune/reap record a divert
+# (env down, branch kept, row stays on the board as delayed). The registry
+# no-ops the divert if the flight already closed (e.g. the PR observer landed
+# it). Deleting the branch is the one teardown that means abandonment, so
+# those paths record a scrub instead. Landing clearance is declared with
+# `flight.mjs hold`; merges then land the flight server-side.
+
+fr_registry_divert() { # slot reason
+  local slot=$1 reason=$2 slug
   slug=$(fr_claim_get "$slot" slug)
-  branch=$(fr_claim_get "$slot" branch)
-  merged_pr=$(cd "$FR_MAIN_PATH" && gh pr list --head "$branch" --state merged \
-    --json number --jq '.[0].number // empty' 2>/dev/null || true)
-  if [[ -n $merged_pr ]]; then
-    fr_registry flight.mjs land "$slug" --pr "$merged_pr"
-  else
-    fr_registry flight.mjs scrub "$slug" --reason "$reason"
-  fi
+  fr_registry flight.mjs divert "$slug" --reason "$reason"
+}
+
+fr_registry_scrub() { # slot reason
+  local slot=$1 reason=$2 slug
+  slug=$(fr_claim_get "$slot" slug)
+  fr_registry flight.mjs scrub "$slug" --reason "$reason"
 }
 
 fr_registry_report() { fr_registry report.mjs; }
