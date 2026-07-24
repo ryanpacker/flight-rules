@@ -1,5 +1,12 @@
 # Prompt: fix silent registry-close no-op when `wt.sh down` runs from inside the worktree
 
+Status: **implemented, 2.2.0 (2026-07-23)** as a rider on the lifecycle
+change. The fallback resolves the driver's repo-relative path via git at
+init time rather than prefix-stripping (`FR_SELF_REL` in `wt/lib.sh`),
+because logical-vs-physical path mismatches broke the prefix approach on
+macOS's symlinked tmpdirs. Regression test drives `down` from inside the
+worktree via the worktree's own driver copy.
+
 Copy everything below into a Flight Rules session as a single prompt.
 
 ---
